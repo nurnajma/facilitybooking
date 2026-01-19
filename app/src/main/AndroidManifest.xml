@@ -53,6 +53,16 @@
             android:name=".AdminBookingsActivity"
             android:exported="false" />
 
+        <!-- Manage Facilities Activity -->
+        <activity
+            android:name=".ManageFacilitiesActivity"
+            android:exported="false" />
+
+        <!-- Add/Edit Facility Activity -->
+        <activity
+            android:name=".AddFacilityActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

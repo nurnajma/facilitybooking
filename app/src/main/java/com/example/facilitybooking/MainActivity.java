@@ -44,7 +44,13 @@ public class MainActivity extends AppCompatActivity {
             String roleText = "Role: " + user.getRole();
             if (spm.isAdmin()) {
                 roleText += " (Administrator)";
-                btnManageFacilities.setVisibility(View.VISIBLE);
+                btnManageFacilities.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Intent intent = new Intent(MainActivity.this, ManageFacilitiesActivity.class);
+                        startActivity(intent);
+                    }
+                });
                 btnAllBookings.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
