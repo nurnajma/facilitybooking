@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_view_details"
+        android:title="View Details" />
+    <item
+        android:id="@+id/menu_book_facility"
+        android:title="Book This Facility" />
+    <item
+        android:id="@+id/menu_update_facility"
+        android:title="Update (Admin)" />
+    <item
+        android:id="@+id/menu_delete_facility"
+        android:title="Delete (Admin)" />
+</menu>
