@@ -38,6 +38,16 @@
             android:name=".FacilityListActivity"
             android:exported="false" />
 
+        <!-- Create Booking Activity -->
+        <activity
+            android:name=".CreateBookingActivity"
+            android:exported="false" />
+
+        <!-- My Bookings Activity -->
+        <activity
+            android:name=".MyBookingsActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

@@ -144,7 +144,12 @@ public class FacilityListActivity extends AppCompatActivity {
     }
 
     private void bookFacility(Facility facility) {
-        Toast.makeText(this, "Booking: " + facility.getFacilityName(), Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(this, CreateBookingActivity.class);
+        intent.putExtra("facilityID", facility.getFacilityID());
+        intent.putExtra("facilityName", facility.getFacilityName());
+        intent.putExtra("capacity", facility.getCapacity());
+        intent.putExtra("hourlyRate", facility.getHourlyRate());
+        startActivity(intent);
     }
 
     private void clearSessionAndRedirect() {
