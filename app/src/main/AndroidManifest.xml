@@ -48,6 +48,11 @@
             android:name=".MyBookingsActivity"
             android:exported="false" />
 
+        <!-- Admin Bookings Activity -->
+        <activity
+            android:name=".AdminBookingsActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

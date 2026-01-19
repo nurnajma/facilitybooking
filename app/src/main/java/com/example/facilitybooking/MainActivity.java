@@ -45,7 +45,13 @@ public class MainActivity extends AppCompatActivity {
             if (spm.isAdmin()) {
                 roleText += " (Administrator)";
                 btnManageFacilities.setVisibility(View.VISIBLE);
-                btnAllBookings.setVisibility(View.VISIBLE);
+                btnAllBookings.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Intent intent = new Intent(MainActivity.this, AdminBookingsActivity.class);
+                        startActivity(intent);
+                    }
+                });
             }
             tvUserInfo.setText(roleText);
         }
@@ -72,6 +78,8 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+
+
     }
 
     private void logoutClicked() {
