@@ -1,0 +1,109 @@
+package com.example.facilitybooking;
+
+import android.content.Intent;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+import androidx.appcompat.app.AppCompatActivity;
+import com.example.facilitybooking.models.Facility;
+import com.example.facilitybooking.models.User;
+import com.example.facilitybooking.remote.ApiUtils;
+import com.example.facilitybooking.remote.FacilityService;
+import com.example.facilitybooking.sharedpref.SharedPrefManager;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+public class FacilityDetailsActivity extends AppCompatActivity {
+
+    private TextView tvFacilityName, tvStatus, tvLocation, tvCapacity, tvHourlyRate, tvDescription;
+    private Button btnBookNow;
+    private Facility facility;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_facility_details);
+
+        tvFacilityName = findViewById(R.id.tvFacilityName);
+        tvStatus = findViewById(R.id.tvStatus);
+        tvLocation = findViewById(R.id.tvLocation);
+        tvCapacity = findViewById(R.id.tvCapacity);
+        tvHourlyRate = findViewById(R.id.tvHourlyRate);
+        tvDescription = findViewById(R.id.tvDescription);
+        btnBookNow = findViewById(R.id.btnBookNow);
+
+        int facilityID = getIntent().getIntExtra("facilityID", -1);
+
+        if (facilityID != -1) {
+            loadFacilityDetails(facilityID);
+        } else {
+            Toast.makeText(this, "Error loading facility", Toast.LENGTH_SHORT).show();
+            finish();
+        }
+
+        btnBookNow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (facility != null) {
+                    Intent intent = new Intent(FacilityDetailsActivity.this, CreateBookingActivity.class);
+                    intent.putExtra("facilityID", facility.getFacilityID());
+                    intent.putExtra("facilityName", facility.getFacilityName());
+                    intent.putExtra("capacity", facility.getCapacity());
+                    intent.putExtra("hourlyRate", facility.getHourlyRate());
+                    startActivity(intent);
+                }
+            }
+        });
+    }
+
+    private void loadFacilityDetails(int facilityID) {
+        SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
+        User user = spm.getUser();
+
+        FacilityService facilityService = ApiUtils.getFacilityService();
+        Call<Facility> call = facilityService.getFacility(user.getToken(), facilityID);
+
+        call.enqueue(new Callback<Facility>() {
+            @Override
+            public void onResponse(Call<Facility> call, Response<Facility> response) {
+                if (response.code() == 200) {
+                    facility = response.body();
+                    displayFacilityDetails();
+                } else {
+                    Toast.makeText(FacilityDetailsActivity.this, "Error: " + response.message(), Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Facility> call, Throwable t) {
+                Toast.makeText(FacilityDetailsActivity.this, "Error connecting to server", Toast.LENGTH_SHORT).show();
+                Log.e("FacilityDetails", "Error: " + t.getMessage());
+            }
+        });
+    }
+
+    private void displayFacilityDetails() {
+        tvFacilityName.setText(facility.getFacilityName());
+        tvLocation.setText(facility.getLocation());
+        tvCapacity.setText(facility.getCapacity() + " people");
+        tvHourlyRate.setText("RM " + String.format("%.2f", facility.getHourlyRate()) + "/hour");
+        tvDescription.setText(facility.getDescription());
+
+        String status = facility.getStatus().toUpperCase();
+        tvStatus.setText(status);
+
+        if ("AVAILABLE".equals(status)) {
+            tvStatus.setBackgroundColor(Color.parseColor("#4CAF50"));
+            btnBookNow.setEnabled(true);
+        } else {
+            tvStatus.setBackgroundColor(Color.parseColor("#FF9800"));
+            btnBookNow.setEnabled(false);
+            btnBookNow.setText("FACILITY UNAVAILABLE");
+        }
+    }
+}

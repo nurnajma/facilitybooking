@@ -132,12 +132,22 @@ public class MyBookingsActivity extends AppCompatActivity {
     }
 
     private void viewBookingDetails(Booking booking) {
-        Toast.makeText(this, "Viewing booking #" + booking.getBookingID(), Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(this, BookingDetailsActivity.class);
+        intent.putExtra("bookingID", booking.getBookingID());
+        startActivity(intent);
     }
 
     private void cancelBooking(Booking booking) {
-        Toast.makeText(this, "Cancel booking feature - Coming soon!", Toast.LENGTH_SHORT).show();
+        if (!"pending".equals(booking.getStatus())) {
+            Toast.makeText(this, "Only pending bookings can be cancelled", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent intent = new Intent(this, BookingDetailsActivity.class);
+        intent.putExtra("bookingID", booking.getBookingID());
+        startActivity(intent);
     }
+
 
     private void clearSessionAndRedirect() {
         SharedPrefManager spm = new SharedPrefManager(getApplicationContext());

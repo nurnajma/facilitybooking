@@ -63,6 +63,22 @@
             android:name=".AddFacilityActivity"
             android:exported="false" />
 
+        <!-- Facility Details Activity -->
+        <activity
+            android:name=".FacilityDetailsActivity"
+            android:exported="false" />
+
+        <!-- Booking Details Activity -->
+        <activity
+            android:name=".BookingDetailsActivity"
+            android:exported="false" />
+
+        <!-- Edit Booking Activity -->
+        <activity
+            android:name=".EditBookingActivity"
+            android:exported="false" />
+
+
     </application>
 
 </manifest>

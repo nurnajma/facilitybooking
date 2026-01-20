@@ -140,7 +140,9 @@ public class FacilityListActivity extends AppCompatActivity {
     }
 
     private void viewFacilityDetails(Facility facility) {
-        Toast.makeText(this, "Viewing: " + facility.getFacilityName(), Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(this, FacilityDetailsActivity.class);
+        intent.putExtra("facilityID", facility.getFacilityID());
+        startActivity(intent);
     }
 
     private void bookFacility(Facility facility) {
