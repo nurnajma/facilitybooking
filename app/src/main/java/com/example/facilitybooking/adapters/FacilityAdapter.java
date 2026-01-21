@@ -1,10 +1,10 @@
 package com.example.facilitybooking.adapters;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -36,18 +36,28 @@ public class FacilityAdapter extends RecyclerView.Adapter<FacilityAdapter.ViewHo
 
         holder.tvFacilityName.setText(facility.getFacilityName());
         holder.tvLocation.setText(facility.getLocation());
-        holder.tvCapacity.setText("Capacity: " + facility.getCapacity());
+        holder.tvCapacity.setText(facility.getCapacity() + " Guests");
         holder.tvHourlyRate.setText("RM " + String.format("%.2f", facility.getHourlyRate()) + "/hr");
-        holder.tvDescription.setText(facility.getDescription());
+
+        if (facility.getDescription() != null && !facility.getDescription().isEmpty()) {
+            holder.tvDescription.setText(facility.getDescription());
+            holder.tvDescription.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvDescription.setVisibility(View.GONE);
+        }
 
         String status = facility.getStatus().toUpperCase();
         holder.tvStatus.setText(status);
 
+        // Set status badge background
         if ("AVAILABLE".equals(status)) {
-            holder.tvStatus.setBackgroundColor(Color.parseColor("#4CAF50"));
+            holder.tvStatus.setBackgroundResource(R.drawable.status_badge_available);
         } else {
-            holder.tvStatus.setBackgroundColor(Color.parseColor("#FF9800"));
+            holder.tvStatus.setBackgroundResource(R.drawable.status_badge_maintenance);
         }
+
+        // Set facility image (placeholder for now - can be replaced with actual image loading)
+        holder.imgFacility.setImageResource(android.R.drawable.ic_menu_gallery);
     }
 
     @Override
@@ -62,11 +72,18 @@ public class FacilityAdapter extends RecyclerView.Adapter<FacilityAdapter.ViewHo
         return null;
     }
 
+    public void updateList(List<Facility> newList) {
+        this.facilityList = newList;
+        notifyDataSetChanged();
+    }
+
     class ViewHolder extends RecyclerView.ViewHolder implements View.OnLongClickListener {
+        ImageView imgFacility;
         TextView tvFacilityName, tvLocation, tvCapacity, tvHourlyRate, tvDescription, tvStatus;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
+            imgFacility = itemView.findViewById(R.id.imgFacility);
             tvFacilityName = itemView.findViewById(R.id.tvFacilityName);
             tvLocation = itemView.findViewById(R.id.tvLocation);
             tvCapacity = itemView.findViewById(R.id.tvCapacity);

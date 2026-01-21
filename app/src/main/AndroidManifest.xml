@@ -33,6 +33,16 @@
             android:name=".MainActivity"
             android:exported="false" />
 
+        <!-- User Dashboard Activity -->
+        <activity
+            android:name=".UserDashboardActivity"
+            android:exported="false" />
+
+        <!-- Admin Dashboard Activity -->
+        <activity
+            android:name=".AdminDashboardActivity"
+            android:exported="false" />
+
         <!-- Facility List Activity -->
         <activity
             android:name=".FacilityListActivity"
@@ -76,6 +86,16 @@
         <!-- Edit Booking Activity -->
         <activity
             android:name=".EditBookingActivity"
+            android:exported="false" />
+
+        <!-- Profile Activity -->
+        <activity
+            android:name=".ProfileActivity"
+            android:exported="false" />
+
+        <!-- Register Activity -->
+        <activity
+            android:name=".RegisterActivity"
             android:exported="false" />
 
 

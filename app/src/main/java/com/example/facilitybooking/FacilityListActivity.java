@@ -50,9 +50,13 @@ public class FacilityListActivity extends AppCompatActivity {
             fabAddFacility.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    Toast.makeText(FacilityListActivity.this, "Add Facility - Coming soon!", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(FacilityListActivity.this, AddFacilityActivity.class);
+                    startActivity(intent);
                 }
             });
+        } else {
+            // Hide the add button for normal/public users
+            fabAddFacility.setVisibility(View.GONE);
         }
 
         loadFacilities();

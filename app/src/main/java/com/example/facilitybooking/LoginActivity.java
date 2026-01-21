@@ -32,8 +32,8 @@ public class LoginActivity extends AppCompatActivity {
 
         SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
         if (spm.isLoggedIn()) {
+            navigateToDashboard(spm);
             finish();
-            startActivity(new Intent(getApplicationContext(), MainActivity.class));
         }
     }
 
@@ -65,8 +65,8 @@ public class LoginActivity extends AppCompatActivity {
                         displayToast("Login successful! Welcome " + user.getUsername());
                         SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
                         spm.storeUser(user);
+                        navigateToDashboard(spm);
                         finish();
-                        startActivity(new Intent(getApplicationContext(), MainActivity.class));
                     } else {
                         displayToast("Login error: No user data received");
                     }
@@ -100,6 +100,22 @@ public class LoginActivity extends AppCompatActivity {
             return false;
         }
         return true;
+    }
+
+    public void openRegister(View view) {
+        // Registration API is not defined yet; this simply navigates
+        // to a placeholder screen that can be wired to backend later.
+        startActivity(new Intent(getApplicationContext(), RegisterActivity.class));
+    }
+
+    private void navigateToDashboard(SharedPrefManager spm) {
+        Intent intent;
+        if (spm.isAdmin()) {
+            intent = new Intent(getApplicationContext(), AdminDashboardActivity.class);
+        } else {
+            intent = new Intent(getApplicationContext(), UserDashboardActivity.class);
+        }
+        startActivity(intent);
     }
 
     public void displayToast(String message) {
