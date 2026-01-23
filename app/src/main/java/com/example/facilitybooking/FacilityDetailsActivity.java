@@ -6,9 +6,11 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import com.bumptech.glide.Glide;
 import com.example.facilitybooking.models.Facility;
 import com.example.facilitybooking.models.User;
 import com.example.facilitybooking.remote.ApiUtils;
@@ -22,6 +24,7 @@ public class FacilityDetailsActivity extends AppCompatActivity {
 
     private TextView tvFacilityName, tvStatus, tvLocation, tvCapacity, tvHourlyRate, tvDescription;
     private Button btnBookNow;
+    private ImageView ivFacilityHeader;
     private Facility facility;
 
     @Override
@@ -36,6 +39,7 @@ public class FacilityDetailsActivity extends AppCompatActivity {
         tvHourlyRate = findViewById(R.id.tvHourlyRate);
         tvDescription = findViewById(R.id.tvDescription);
         btnBookNow = findViewById(R.id.btnBookNow);
+        ivFacilityHeader = findViewById(R.id.ivFacilityHeader);
 
         int facilityID = getIntent().getIntExtra("facilityID", -1);
 
@@ -93,6 +97,17 @@ public class FacilityDetailsActivity extends AppCompatActivity {
         tvCapacity.setText(facility.getCapacity() + " people");
         tvHourlyRate.setText("RM " + String.format("%.2f", facility.getHourlyRate()) + "/hour");
         tvDescription.setText(facility.getDescription());
+
+        // Load image if available
+        String imageUrl = facility.getImageUrl();
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            Glide.with(this)
+                    .load(imageUrl)
+                    .centerCrop()
+                    .placeholder(android.R.drawable.ic_menu_gallery)
+                    .error(android.R.drawable.ic_menu_report_image)
+                    .into(ivFacilityHeader);
+        }
 
         String status = facility.getStatus().toUpperCase();
         tvStatus.setText(status);

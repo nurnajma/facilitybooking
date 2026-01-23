@@ -51,7 +51,7 @@ public class ManageFacilitiesActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(ManageFacilitiesActivity.this, AddFacilityActivity.class);
-                startActivity(intent);
+                startActivityForResult(intent, 2001);
             }
         });
 
@@ -80,8 +80,30 @@ public class ManageFacilitiesActivity extends AppCompatActivity {
                 if (response.code() == 200) {
                     List<Facility> facilities = response.body();
                     if (facilities != null && !facilities.isEmpty()) {
-                        adapter = new FacilityAdapter(facilities, getApplicationContext());
+                        adapter = new com.example.facilitybooking.adapters.FacilityAdapter(facilities, ManageFacilitiesActivity.this, false);
                         rvManageFacilities.setAdapter(adapter);
+                        // For facilities missing imageUrl, try to fetch images and update adapter when available
+                        for (int i = 0; i < facilities.size(); i++) {
+                            com.example.facilitybooking.models.Facility fac = facilities.get(i);
+                            if (fac.getImageUrl() == null || fac.getImageUrl().isEmpty()) {
+                                int idx = i;
+                                facilityService.getFacilityImages(token, fac.getFacilityID()).enqueue(new Callback<java.util.List<com.example.facilitybooking.models.ImageResponse>>() {
+                                    @Override
+                                    public void onResponse(Call<java.util.List<com.example.facilitybooking.models.ImageResponse>> call2, Response<java.util.List<com.example.facilitybooking.models.ImageResponse>> resp) {
+                                        if (resp.isSuccessful() && resp.body() != null && !resp.body().isEmpty()) {
+                                            String url = resp.body().get(0).getImageURL();
+                                            if (url != null && !url.isEmpty()) {
+                                                facilities.get(idx).setImageUrl(url);
+                                                adapter.notifyItemChanged(idx);
+                                            }
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onFailure(Call<java.util.List<com.example.facilitybooking.models.ImageResponse>> call2, Throwable t2) { }
+                                });
+                            }
+                        }
                         tvEmptyState.setVisibility(View.GONE);
                         rvManageFacilities.setVisibility(View.VISIBLE);
                     } else {
@@ -145,10 +167,11 @@ public class ManageFacilitiesActivity extends AppCompatActivity {
         intent.putExtra("hourlyRate", facility.getHourlyRate());
         intent.putExtra("location", facility.getLocation());
         intent.putExtra("status", facility.getStatus());
-        startActivity(intent);
+        intent.putExtra("imageUrl", facility.getImageUrl());
+        startActivityForResult(intent, 2001);
     }
 
-    private void deleteFacility(Facility facility) {
+    public void deleteFacility(Facility facility) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Delete Facility");
         builder.setMessage("Are you sure you want to delete " + facility.getFacilityName() + "?");
@@ -201,5 +224,15 @@ public class ManageFacilitiesActivity extends AppCompatActivity {
         finish();
         Intent intent = new Intent(this, LoginActivity.class);
         startActivity(intent);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 2001 && resultCode == RESULT_OK) {
+            // Either reload entire list or update single item. For simplicity reload.
+            Log.d("ManageFacilities", "AddFacilityActivity returned OK, reloading facilities");
+            loadFacilities();
+        }
     }
 }

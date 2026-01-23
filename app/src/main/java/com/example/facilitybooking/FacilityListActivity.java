@@ -7,6 +7,8 @@ import android.view.ContextMenu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,6 +19,7 @@ import com.example.facilitybooking.models.Facility;
 import com.example.facilitybooking.models.User;
 import com.example.facilitybooking.remote.ApiUtils;
 import com.example.facilitybooking.remote.FacilityService;
+import com.example.facilitybooking.models.DeleteResponse;
 import com.example.facilitybooking.sharedpref.SharedPrefManager;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.List;
@@ -78,7 +81,7 @@ public class FacilityListActivity extends AppCompatActivity {
                 if (response.code() == 200) {
                     List<Facility> facilities = response.body();
                     if (facilities != null && !facilities.isEmpty()) {
-                        adapter = new FacilityAdapter(facilities, getApplicationContext());
+                        adapter = new FacilityAdapter(facilities, FacilityListActivity.this);
                         rvFacilityList.setAdapter(adapter);
                         tvEmptyState.setVisibility(View.GONE);
                         rvFacilityList.setVisibility(View.VISIBLE);
@@ -137,7 +140,23 @@ public class FacilityListActivity extends AppCompatActivity {
         } else if (itemId == R.id.menu_update_facility) {
             Toast.makeText(this, "Update facility: " + selectedFacility.getFacilityName(), Toast.LENGTH_SHORT).show();
         } else if (itemId == R.id.menu_delete_facility) {
-            Toast.makeText(this, "Delete facility: " + selectedFacility.getFacilityName(), Toast.LENGTH_SHORT).show();
+            // Confirm deletion
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Delete Facility");
+            builder.setMessage("Are you sure you want to delete " + selectedFacility.getFacilityName() + "?");
+            builder.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    performDelete(selectedFacility);
+                }
+            });
+            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+                }
+            });
+            builder.show();
         }
 
         return super.onContextItemSelected(item);
@@ -164,5 +183,31 @@ public class FacilityListActivity extends AppCompatActivity {
         finish();
         Intent intent = new Intent(this, LoginActivity.class);
         startActivity(intent);
+    }
+
+    private void performDelete(Facility facility) {
+        SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
+        User user = spm.getUser();
+
+        facilityService = ApiUtils.getFacilityService();
+        Call<DeleteResponse> call = facilityService.deleteFacility(user.getToken(), facility.getFacilityID());
+
+        call.enqueue(new Callback<DeleteResponse>() {
+            @Override
+            public void onResponse(Call<DeleteResponse> call, Response<DeleteResponse> response) {
+                if (response.code() == 200) {
+                    Toast.makeText(FacilityListActivity.this, "Facility deleted successfully!", Toast.LENGTH_SHORT).show();
+                    loadFacilities();
+                } else {
+                    Toast.makeText(FacilityListActivity.this, "Error: " + response.message(), Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<DeleteResponse> call, Throwable t) {
+                Toast.makeText(FacilityListActivity.this, "Error connecting to server", Toast.LENGTH_SHORT).show();
+                Log.e("FacilityList", "Delete error: " + (t == null ? "unknown" : t.getMessage()));
+            }
+        });
     }
 }

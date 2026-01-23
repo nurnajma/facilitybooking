@@ -6,7 +6,7 @@
     android:layout_marginStart="16dp"
     android:layout_marginEnd="16dp"
     android:layout_marginTop="12dp"
-    android:layout_marginBottom="12dp"
+    android:layout_marginBottom="4dp"
     app:cardCornerRadius="16dp"
     app:cardElevation="4dp"
     app:cardBackgroundColor="@color/card_background">
@@ -48,19 +48,20 @@
                 android:paddingTop="6dp"
                 android:paddingBottom="6dp" />
 
-            <!-- Favorite Button (Optional) -->
-            <ImageView
-                android:id="@+id/imgFavorite"
+            <!-- Delete Button (Admin Only) -->
+            <ImageButton
+                android:id="@+id/btnDeleteFacility"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:layout_alignParentTop="true"
-                android:layout_alignParentStart="true"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentEnd="true"
                 android:layout_margin="12dp"
-                android:src="@android:drawable/btn_star_big_off"
+                android:src="@android:drawable/ic_menu_delete"
                 android:background="@drawable/circle_background"
-                android:padding="8dp"
+                android:backgroundTint="#F44336"
+                android:tint="@color/white"
                 android:visibility="gone"
-                android:contentDescription="Add to favorites" />
+                android:contentDescription="Delete facility" />
 
         </RelativeLayout>
 
@@ -104,33 +105,6 @@
                     android:textSize="14sp"
                     android:textColor="@color/text_secondary"
                     android:layout_marginStart="4dp" />
-
-                <!-- Rating (if available) -->
-                <LinearLayout
-                    android:id="@+id/ratingLayout"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="⭐"
-                        android:textSize="14sp" />
-
-                    <TextView
-                        android:id="@+id/tvRating"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="4.9"
-                        android:textSize="12sp"
-                        android:textColor="@color/text_primary"
-                        android:textStyle="bold"
-                        android:layout_marginStart="4dp" />
-
-                </LinearLayout>
 
             </LinearLayout>
 

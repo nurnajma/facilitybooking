@@ -65,7 +65,16 @@
                     android:layout_height="wrap_content"
                     android:hint="Confirm Password"
                     android:inputType="textPassword"
-                    android:layout_marginBottom="24dp" />
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Loading indicator for registration API call -->
+                <ProgressBar
+                    android:id="@+id/progressBar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:visibility="gone"
+                    android:layout_marginBottom="16dp" />
 
                 <Button
                     android:id="@+id/btnRegister"
@@ -90,4 +99,3 @@
     </LinearLayout>
 
 </ScrollView>
-

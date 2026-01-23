@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -18,6 +19,7 @@ import com.example.facilitybooking.models.User;
 import com.example.facilitybooking.remote.ApiUtils;
 import com.example.facilitybooking.remote.FacilityService;
 import com.example.facilitybooking.sharedpref.SharedPrefManager;
+import com.example.facilitybooking.utils.Constants;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.util.ArrayList;
@@ -33,6 +35,7 @@ public class UserDashboardActivity extends AppCompatActivity {
     private RecyclerView rvFacilities;
     private View tvEmptyState;
     private EditText edtSearch;
+    private ProgressBar progressBar; // Loading indicator for API calls
     private BottomNavigationView bottomNavigation;
 
     private FacilityAdapter adapter;
@@ -48,6 +51,7 @@ public class UserDashboardActivity extends AppCompatActivity {
         rvFacilities = findViewById(R.id.rvFacilities);
         tvEmptyState = findViewById(R.id.tvEmptyState);
         edtSearch = findViewById(R.id.edtSearch);
+        progressBar = findViewById(R.id.progressBar); // Initialize loading indicator
         bottomNavigation = findViewById(R.id.bottomNavigation);
 
         rvFacilities.setLayoutManager(new LinearLayoutManager(this));
@@ -71,6 +75,8 @@ public class UserDashboardActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        // Ensure bottom nav reflects current screen
+        if (bottomNavigation != null) bottomNavigation.setSelectedItemId(R.id.nav_home);
         loadFacilities();
     }
 
@@ -81,10 +87,14 @@ public class UserDashboardActivity extends AppCompatActivity {
                 // already here
                 return true;
             } else if (id == R.id.nav_my_bookings) {
-                startActivity(new Intent(this, MyBookingsActivity.class));
+                Intent intent = new Intent(this, MyBookingsActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
                 return true;
             } else if (id == R.id.nav_profile) {
-                startActivity(new Intent(this, ProfileActivity.class));
+                Intent intent = new Intent(this, ProfileActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
                 return true;
             }
             return false;
@@ -124,12 +134,20 @@ public class UserDashboardActivity extends AppCompatActivity {
         User user = spm.getUser();
         String token = user.getToken();
 
+        // Show loading indicator
+        progressBar.setVisibility(View.VISIBLE);
+        rvFacilities.setVisibility(View.GONE);
+        tvEmptyState.setVisibility(View.GONE);
+
         facilityService = ApiUtils.getFacilityService();
         Call<List<Facility>> call = facilityService.getAllFacilities(token);
 
         call.enqueue(new Callback<List<Facility>>() {
             @Override
             public void onResponse(Call<List<Facility>> call, Response<List<Facility>> response) {
+                // Hide loading indicator
+                progressBar.setVisibility(View.GONE);
+                
                 if (response.code() == 200) {
                     List<Facility> facilities = response.body();
                     if (facilities != null && !facilities.isEmpty()) {
@@ -146,18 +164,21 @@ public class UserDashboardActivity extends AppCompatActivity {
                         showEmptyState();
                     }
                 } else if (response.code() == 401) {
-                    Toast.makeText(getApplicationContext(), "Session expired. Please login again.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), Constants.MSG_SESSION_EXPIRED, Toast.LENGTH_LONG).show();
                     spm.logout();
                     finish();
                     startActivity(new Intent(UserDashboardActivity.this, LoginActivity.class));
                 } else {
-                    Toast.makeText(getApplicationContext(), "Error: " + response.message(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), Constants.MSG_GENERIC_ERROR, Toast.LENGTH_LONG).show();
                 }
             }
 
             @Override
             public void onFailure(Call<List<Facility>> call, Throwable t) {
-                Toast.makeText(getApplicationContext(), "Error connecting to server", Toast.LENGTH_LONG).show();
+                // Hide loading indicator
+                progressBar.setVisibility(View.GONE);
+                
+                Toast.makeText(getApplicationContext(), Constants.MSG_NETWORK_ERROR, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -199,4 +220,3 @@ public class UserDashboardActivity extends AppCompatActivity {
         }
     }
 }
-

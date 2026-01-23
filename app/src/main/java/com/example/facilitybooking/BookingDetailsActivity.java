@@ -3,23 +3,25 @@ package com.example.facilitybooking;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import com.example.facilitybooking.models.Booking;
+import com.example.facilitybooking.models.Facility;
 import com.example.facilitybooking.models.User;
 import com.example.facilitybooking.remote.ApiUtils;
 import com.example.facilitybooking.remote.BookingService;
+import com.example.facilitybooking.remote.FacilityService;
+import com.example.facilitybooking.remote.UserService;
 import com.example.facilitybooking.sharedpref.SharedPrefManager;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import com.example.facilitybooking.utils.Constants;
 import java.util.Locale;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -27,29 +29,39 @@ import retrofit2.Response;
 
 public class BookingDetailsActivity extends AppCompatActivity {
 
-    private TextView tvBookingID, tvStatus, tvFacilityName, tvDate, tvTime, tvPurpose, tvCost, tvAdminNotes;
+    private TextView tvBookingID, tvStatus, tvFacilityName, tvDate, tvTime, tvPurpose, tvCost, tvAdminNotes, tvUser, tvAdminNotesLabel;
     private CardView cardAdminNotes;
-    private LinearLayout layoutActions;
-    private Button btnEditBooking, btnCancelBooking;
+    private LinearLayout layoutActions, layoutAdminActions;
+    private Button btnEditBooking, btnCancelBooking, btnApproveBooking, btnRejectBooking;
     private Booking booking;
+    private SharedPrefManager spm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_booking_details);
 
+        spm = new SharedPrefManager(getApplicationContext());
+
         tvBookingID = findViewById(R.id.tvBookingID);
         tvStatus = findViewById(R.id.tvStatus);
+        tvUser = findViewById(R.id.tvUser);
         tvFacilityName = findViewById(R.id.tvFacilityName);
         tvDate = findViewById(R.id.tvDate);
         tvTime = findViewById(R.id.tvTime);
         tvPurpose = findViewById(R.id.tvPurpose);
         tvCost = findViewById(R.id.tvCost);
         tvAdminNotes = findViewById(R.id.tvAdminNotes);
+        tvAdminNotesLabel = findViewById(R.id.tvAdminNotesLabel);
         cardAdminNotes = findViewById(R.id.cardAdminNotes);
+        
         layoutActions = findViewById(R.id.layoutActions);
+        layoutAdminActions = findViewById(R.id.layoutAdminActions);
+        
         btnEditBooking = findViewById(R.id.btnEditBooking);
         btnCancelBooking = findViewById(R.id.btnCancelBooking);
+        btnApproveBooking = findViewById(R.id.btnApproveBooking);
+        btnRejectBooking = findViewById(R.id.btnRejectBooking);
 
         int bookingID = getIntent().getIntExtra("bookingID", -1);
 
@@ -60,25 +72,14 @@ public class BookingDetailsActivity extends AppCompatActivity {
             finish();
         }
 
-        btnEditBooking.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                editBooking();
-            }
-        });
-
-        btnCancelBooking.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                cancelBooking();
-            }
-        });
+        btnEditBooking.setOnClickListener(v -> editBooking());
+        btnCancelBooking.setOnClickListener(v -> cancelBooking());
+        btnApproveBooking.setOnClickListener(v -> approveBooking());
+        btnRejectBooking.setOnClickListener(v -> rejectBooking());
     }
 
     private void loadBookingDetails(int bookingID) {
-        SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
         User user = spm.getUser();
-
         BookingService bookingService = ApiUtils.getBookingService();
         Call<Booking> call = bookingService.getBooking(user.getToken(), bookingID);
 
@@ -89,14 +90,13 @@ public class BookingDetailsActivity extends AppCompatActivity {
                     booking = response.body();
                     displayBookingDetails();
                 } else {
-                    Toast.makeText(BookingDetailsActivity.this, "Error: " + response.message(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(BookingDetailsActivity.this, Constants.MSG_GENERIC_ERROR, Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<Booking> call, Throwable t) {
-                Toast.makeText(BookingDetailsActivity.this, "Error connecting to server", Toast.LENGTH_SHORT).show();
-                Log.e("BookingDetails", "Error: " + t.getMessage());
+                Toast.makeText(BookingDetailsActivity.this, Constants.MSG_NETWORK_ERROR, Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -104,89 +104,129 @@ public class BookingDetailsActivity extends AppCompatActivity {
     private void displayBookingDetails() {
         tvBookingID.setText("#" + booking.getBookingID());
 
-        if (booking.getFacility() != null) {
+        // Resolve Facility Name
+        if (booking.getFacility() != null && booking.getFacility().getFacilityName() != null) {
             tvFacilityName.setText(booking.getFacility().getFacilityName());
         } else {
-            tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+            tvFacilityName.setText("Loading...");
+            ApiUtils.getFacilityService().getFacility(spm.getUser().getToken(), booking.getFacilityID()).enqueue(new Callback<Facility>() {
+                @Override
+                public void onResponse(Call<Facility> call, Response<Facility> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        tvFacilityName.setText(response.body().getFacilityName());
+                    } else {
+                        tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+                    }
+                }
+                @Override
+                public void onFailure(Call<Facility> call, Throwable t) {
+                    tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+                }
+            });
         }
 
-        tvDate.setText(booking.getBookingDate());
-        String time = booking.getStartTime().substring(0, 5) + " - " + booking.getEndTime().substring(0, 5);
-        tvTime.setText(time);
-        tvPurpose.setText(booking.getPurpose());
-        tvCost.setText("RM " + String.format("%.2f", booking.getTotalCost()));
-
-        String status = booking.getStatus().toUpperCase();
-        tvStatus.setText(status);
-
-        switch (status) {
-            case "PENDING":
-                tvStatus.setBackgroundColor(Color.parseColor("#FF9800"));
-                layoutActions.setVisibility(View.VISIBLE);
-                break;
-            case "APPROVED":
-                tvStatus.setBackgroundColor(Color.parseColor("#4CAF50"));
-                layoutActions.setVisibility(View.GONE);
-                break;
-            case "REJECTED":
-                tvStatus.setBackgroundColor(Color.parseColor("#F44336"));
-                layoutActions.setVisibility(View.GONE);
-                if (booking.getAdminNotes() != null && !booking.getAdminNotes().isEmpty()) {
-                    cardAdminNotes.setVisibility(View.VISIBLE);
-                    tvAdminNotes.setText(booking.getAdminNotes());
+        // Resolve User Name
+        tvUser.setText("Loading...");
+        ApiUtils.getUserService().getUser(spm.getUser().getToken(), booking.getUserID()).enqueue(new Callback<User>() {
+            @Override
+            public void onResponse(Call<User> call, Response<User> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    tvUser.setText(response.body().getUsername());
+                } else {
+                    tvUser.setText("User ID: " + booking.getUserID());
                 }
-                break;
-            default:
-                tvStatus.setBackgroundColor(Color.parseColor("#9E9E9E"));
-                layoutActions.setVisibility(View.GONE);
-                break;
+            }
+            @Override
+            public void onFailure(Call<User> call, Throwable t) {
+                tvUser.setText("User ID: " + booking.getUserID());
+            }
+        });
+
+        tvDate.setText(booking.getBookingDate());
+        String start = booking.getStartTime() != null && booking.getStartTime().length() >= 5 ? booking.getStartTime().substring(0, 5) : "00:00";
+        String end = booking.getEndTime() != null && booking.getEndTime().length() >= 5 ? booking.getEndTime().substring(0, 5) : "00:00";
+        tvTime.setText(start + " - " + end);
+        
+        tvPurpose.setText(booking.getPurpose());
+        tvCost.setText(String.format(Locale.getDefault(), "RM %.2f", booking.getTotalCost()));
+
+        String status = Constants.normalizeStatus(booking.getStatus());
+        tvStatus.setText(status.toUpperCase());
+        tvStatus.setBackgroundColor(Constants.getStatusColor(status));
+
+        // Logic to show/hide action buttons
+        boolean isAdmin = spm.isAdmin();
+        boolean isPending = Constants.STATUS_PENDING.equals(status);
+
+        if (isAdmin) {
+            layoutActions.setVisibility(View.GONE);
+            layoutAdminActions.setVisibility(isPending ? View.VISIBLE : View.GONE);
+        } else {
+            layoutAdminActions.setVisibility(View.GONE);
+            layoutActions.setVisibility(isPending ? View.VISIBLE : View.GONE);
+        }
+
+        // Show admin notes if available
+        if (booking.getAdminNotes() != null && !booking.getAdminNotes().isEmpty()) {
+            cardAdminNotes.setVisibility(View.VISIBLE);
+            tvAdminNotes.setText(booking.getAdminNotes());
+            if (Constants.STATUS_REJECTED.equals(status)) {
+                tvAdminNotesLabel.setText("❌ Rejection Reason");
+                cardAdminNotes.setCardBackgroundColor(android.graphics.Color.parseColor("#FFEBEE"));
+            } else {
+                tvAdminNotesLabel.setText("📝 Admin Notes");
+                cardAdminNotes.setCardBackgroundColor(android.graphics.Color.parseColor("#E3F2FD"));
+            }
+        } else {
+            cardAdminNotes.setVisibility(View.GONE);
         }
     }
 
     private void editBooking() {
         Intent intent = new Intent(this, EditBookingActivity.class);
         intent.putExtra("bookingID", booking.getBookingID());
-        intent.putExtra("facilityID", booking.getFacilityID());
-        intent.putExtra("facilityName", booking.getFacility() != null ? booking.getFacility().getFacilityName() : "");
-        intent.putExtra("bookingDate", booking.getBookingDate());
-        intent.putExtra("startTime", booking.getStartTime());
-        intent.putExtra("endTime", booking.getEndTime());
-        intent.putExtra("purpose", booking.getPurpose());
-        intent.putExtra("totalCost", booking.getTotalCost());
         startActivity(intent);
         finish();
     }
 
     private void cancelBooking() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Cancel Booking");
-        builder.setMessage("Are you sure you want to cancel this booking?");
-
-        builder.setPositiveButton("Yes, Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                performCancel();
-            }
-        });
-
-        builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
-
-        builder.show();
+        new AlertDialog.Builder(this)
+                .setTitle("Cancel Booking")
+                .setMessage(Constants.MSG_CONFIRM_CANCEL)
+                .setPositiveButton("Yes", (dialog, which) -> updateBookingStatus(Constants.STATUS_CANCELLED, ""))
+                .setNegativeButton("No", null)
+                .show();
     }
 
-    private void performCancel() {
-        SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
+    private void approveBooking() {
+        new AlertDialog.Builder(this)
+                .setTitle("Approve Booking")
+                .setMessage("Are you sure you want to approve this booking?")
+                .setPositiveButton("Approve", (dialog, which) -> updateBookingStatus(Constants.STATUS_APPROVED, ""))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void rejectBooking() {
+        final EditText input = new EditText(this);
+        input.setHint("Reason for rejection");
+        
+        new AlertDialog.Builder(this)
+                .setTitle("Reject Booking")
+                .setMessage("Please provide a reason for rejection:")
+                .setView(input)
+                .setPositiveButton("Reject", (dialog, which) -> {
+                    String reason = input.getText().toString().trim();
+                    updateBookingStatus(Constants.STATUS_REJECTED, reason.isEmpty() ? "No reason provided" : reason);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void updateBookingStatus(String newStatus, String adminNotes) {
         User user = spm.getUser();
-
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        String updatedAt = sdf.format(new Date());
-
         BookingService bookingService = ApiUtils.getBookingService();
+        
         Call<Booking> call = bookingService.updateBooking(
                 user.getToken(),
                 booking.getBookingID(),
@@ -196,25 +236,30 @@ public class BookingDetailsActivity extends AppCompatActivity {
                 booking.getStartTime(),
                 booking.getEndTime(),
                 booking.getPurpose(),
-                "cancelled",
-                "",
+                newStatus,
+                adminNotes,
                 booking.getTotalCost()
         );
 
         call.enqueue(new Callback<Booking>() {
             @Override
             public void onResponse(Call<Booking> call, Response<Booking> response) {
-                if (response.code() == 200) {
-                    Toast.makeText(BookingDetailsActivity.this, "Booking cancelled successfully!", Toast.LENGTH_SHORT).show();
+                if (response.isSuccessful()) {
+                    String msg = "";
+                    if (Constants.STATUS_APPROVED.equals(newStatus)) msg = Constants.MSG_BOOKING_APPROVED;
+                    else if (Constants.STATUS_REJECTED.equals(newStatus)) msg = Constants.MSG_BOOKING_REJECTED;
+                    else if (Constants.STATUS_CANCELLED.equals(newStatus)) msg = Constants.MSG_BOOKING_CANCELLED;
+                    
+                    Toast.makeText(BookingDetailsActivity.this, msg, Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
-                    Toast.makeText(BookingDetailsActivity.this, "Error: " + response.message(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(BookingDetailsActivity.this, Constants.MSG_GENERIC_ERROR, Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<Booking> call, Throwable t) {
-                Toast.makeText(BookingDetailsActivity.this, "Error connecting to server", Toast.LENGTH_SHORT).show();
+                Toast.makeText(BookingDetailsActivity.this, Constants.MSG_NETWORK_ERROR, Toast.LENGTH_SHORT).show();
             }
         });
     }

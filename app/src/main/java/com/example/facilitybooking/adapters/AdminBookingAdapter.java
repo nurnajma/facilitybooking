@@ -5,22 +5,48 @@ import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.facilitybooking.R;
 import com.example.facilitybooking.models.Booking;
+import com.example.facilitybooking.remote.ApiUtils;
+import com.example.facilitybooking.remote.FacilityService;
+import com.example.facilitybooking.remote.UserService;
+import com.example.facilitybooking.sharedpref.SharedPrefManager;
+import com.example.facilitybooking.models.Facility;
+import com.example.facilitybooking.models.User;
+import com.example.facilitybooking.utils.Constants;
 import java.util.List;
+import java.util.Locale;
+
+import retrofit2.Call;
+import retrofit2.Response;
 
 public class AdminBookingAdapter extends RecyclerView.Adapter<AdminBookingAdapter.ViewHolder> {
 
     private List<Booking> bookingList;
-    private Context mContext;
+    private final Context mContext;
+    private FacilityService facilityService;
+    private UserService userService;
+    private SharedPrefManager spm;
     private int currentPos;
+    private AdminActionListener actionListener;
+    private java.util.Set<Integer> processingSet = new java.util.HashSet<>();
 
-    public AdminBookingAdapter(List<Booking> bookingList, Context context) {
+    public interface AdminActionListener {
+        void onApprove(Booking booking);
+        void onReject(Booking booking);
+    }
+
+    public AdminBookingAdapter(List<Booking> bookingList, Context context, AdminActionListener listener) {
         this.bookingList = bookingList;
         this.mContext = context;
+        this.facilityService = ApiUtils.getFacilityService();
+        this.userService = ApiUtils.getUserService();
+        this.spm = new SharedPrefManager(context);
+        this.actionListener = listener;
     }
 
     @NonNull
@@ -35,49 +61,106 @@ public class AdminBookingAdapter extends RecyclerView.Adapter<AdminBookingAdapte
         Booking booking = bookingList.get(position);
 
         // Booking ID
-        holder.tvBookingID.setText(String.valueOf(booking.getBookingID()));
+        holder.tvBookingID.setText("#" + booking.getBookingID());
 
-        // User info
-        holder.tvUserInfo.setText("👤 User ID: " + booking.getUserID());
+        // User info (Username)
+        holder.tvUserInfo.setText("Loading user...");
+        try {
+            User currentUser = spm.getUser();
+            if (currentUser != null) {
+                userService.getUser(currentUser.getToken(), booking.getUserID()).enqueue(new retrofit2.Callback<User>() {
+                    @Override
+                    public void onResponse(Call<User> call, Response<User> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            holder.tvUserInfo.setText("👤 " + response.body().getUsername());
+                        } else {
+                            holder.tvUserInfo.setText("👤 User ID: " + booking.getUserID());
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<User> call, Throwable t) {
+                        holder.tvUserInfo.setText("👤 User ID: " + booking.getUserID());
+                    }
+                });
+            } else {
+                holder.tvUserInfo.setText("👤 User ID: " + booking.getUserID());
+            }
+        } catch (Exception e) {
+            holder.tvUserInfo.setText("👤 User ID: " + booking.getUserID());
+        }
 
         // Facility name
-        if (booking.getFacility() != null) {
+        if (booking.getFacility() != null && booking.getFacility().getFacilityName() != null && !booking.getFacility().getFacilityName().isEmpty()) {
             holder.tvFacilityName.setText(booking.getFacility().getFacilityName());
         } else {
-            holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+            holder.tvFacilityName.setText("Loading facility...");
+            try {
+                User user = spm.getUser();
+                if (user != null) {
+                    facilityService.getFacility(user.getToken(), booking.getFacilityID()).enqueue(new retrofit2.Callback<Facility>() {
+                        @Override
+                        public void onResponse(retrofit2.Call<Facility> call, Response<Facility> response) {
+                            if (response.isSuccessful() && response.body() != null) {
+                                holder.tvFacilityName.setText(response.body().getFacilityName());
+                                booking.setFacility(response.body());
+                            } else {
+                                holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(retrofit2.Call<Facility> call, Throwable t) {
+                            holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+                        }
+                    });
+                } else {
+                    holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+                }
+            } catch (Exception e) {
+                holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+            }
         }
 
         // Date and time
         holder.tvBookingDate.setText(booking.getBookingDate());
-        String time = booking.getStartTime().substring(0, 5) + " - " + booking.getEndTime().substring(0, 5);
-        holder.tvBookingTime.setText(time);
+        String start = booking.getStartTime() != null && booking.getStartTime().length() >= 5 ? booking.getStartTime().substring(0, 5) : "00:00";
+        String end = booking.getEndTime() != null && booking.getEndTime().length() >= 5 ? booking.getEndTime().substring(0, 5) : "00:00";
+        holder.tvBookingTime.setText(start + " - " + end);
 
         // Purpose
         holder.tvPurpose.setText(booking.getPurpose());
 
         // Cost
-        holder.tvCost.setText("RM " + String.format("%.2f", booking.getTotalCost()));
+        holder.tvCost.setText(String.format(Locale.getDefault(), "RM %.2f", booking.getTotalCost()));
 
         // Status
-        String status = booking.getStatus().toUpperCase();
-        holder.tvStatus.setText(status);
+        String status = Constants.normalizeStatus(booking.getStatus());
+        holder.tvStatus.setText(status.toUpperCase());
+        holder.tvStatus.setBackgroundColor(Constants.getStatusColor(status));
+        holder.tvStatus.setTextColor(Color.WHITE);
 
-        switch (status) {
-            case "PENDING":
-                holder.tvStatus.setBackgroundColor(Color.parseColor("#FF9800"));
-                break;
-            case "APPROVED":
-                holder.tvStatus.setBackgroundColor(Color.parseColor("#4CAF50"));
-                break;
-            case "REJECTED":
-                holder.tvStatus.setBackgroundColor(Color.parseColor("#F44336"));
-                break;
-            case "COMPLETED":
-                holder.tvStatus.setBackgroundColor(Color.parseColor("#2196F3"));
-                break;
-            case "CANCELLED":
-                holder.tvStatus.setBackgroundColor(Color.parseColor("#9E9E9E"));
-                break;
+        // Show approve/reject buttons only when pending
+        boolean isProcessing = processingSet.contains(booking.getBookingID());
+        if (Constants.STATUS_PENDING.equals(status)) {
+            holder.btnApprove.setVisibility(View.VISIBLE);
+            holder.btnReject.setVisibility(View.VISIBLE);
+            holder.btnApprove.setEnabled(!isProcessing);
+            holder.btnReject.setEnabled(!isProcessing);
+            holder.btnApprove.setText(isProcessing ? "Approving..." : "Approve");
+            holder.btnApprove.setOnClickListener(v -> {
+                if (actionListener != null && !isProcessing) {
+                    actionListener.onApprove(booking);
+                }
+            });
+            holder.btnReject.setOnClickListener(v -> {
+                if (actionListener != null && !isProcessing) {
+                    actionListener.onReject(booking);
+                }
+            });
+        } else {
+            holder.btnApprove.setVisibility(View.GONE);
+            holder.btnReject.setVisibility(View.GONE);
         }
     }
 
@@ -98,8 +181,23 @@ public class AdminBookingAdapter extends RecyclerView.Adapter<AdminBookingAdapte
         notifyDataSetChanged();
     }
 
-    class ViewHolder extends RecyclerView.ViewHolder implements View.OnLongClickListener {
+    // Mark a booking as processing (true) or not (false). Adapter will disable buttons for processing items.
+    public void setProcessing(int bookingId, boolean processing) {
+        if (processing) processingSet.add(bookingId);
+        else processingSet.remove(bookingId);
+
+        // find index and refresh that item only
+        for (int i = 0; i < bookingList.size(); i++) {
+            if (bookingList.get(i).getBookingID() == bookingId) {
+                notifyItemChanged(i);
+                break;
+            }
+        }
+    }
+
+    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnLongClickListener {
         TextView tvBookingID, tvUserInfo, tvFacilityName, tvBookingDate, tvBookingTime, tvPurpose, tvCost, tvStatus;
+        Button btnApprove, btnReject;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -111,12 +209,14 @@ public class AdminBookingAdapter extends RecyclerView.Adapter<AdminBookingAdapte
             tvPurpose = itemView.findViewById(R.id.tvPurpose);
             tvCost = itemView.findViewById(R.id.tvCost);
             tvStatus = itemView.findViewById(R.id.tvStatus);
+            btnApprove = itemView.findViewById(R.id.btnApprove);
+            btnReject = itemView.findViewById(R.id.btnReject);
             itemView.setOnLongClickListener(this);
         }
 
         @Override
         public boolean onLongClick(View v) {
-            currentPos = getAdapterPosition();
+            currentPos = getBindingAdapterPosition();
             return false;
         }
     }

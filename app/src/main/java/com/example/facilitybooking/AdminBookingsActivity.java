@@ -11,6 +11,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,6 +24,8 @@ import com.example.facilitybooking.models.User;
 import com.example.facilitybooking.remote.ApiUtils;
 import com.example.facilitybooking.remote.BookingService;
 import com.example.facilitybooking.sharedpref.SharedPrefManager;
+import com.example.facilitybooking.utils.Constants;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -36,11 +39,13 @@ public class AdminBookingsActivity extends AppCompatActivity {
 
     private RecyclerView rvAdminBookings;
     private TextView tvEmptyState;
+    private ProgressBar progressBar; // Loading indicator for API calls
     private Button btnFilterAll, btnFilterPending, btnFilterApproved, btnFilterRejected;
     private AdminBookingAdapter adapter;
     private BookingService bookingService;
     private List<Booking> allBookings = new ArrayList<>();
     private String currentFilter = "all";
+    private BottomNavigationView bottomNavigation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +54,7 @@ public class AdminBookingsActivity extends AppCompatActivity {
 
         rvAdminBookings = findViewById(R.id.rvAdminBookings);
         tvEmptyState = findViewById(R.id.tvEmptyState);
+        progressBar = findViewById(R.id.progressBar); // Initialize loading indicator
         btnFilterAll = findViewById(R.id.btnFilterAll);
         btnFilterPending = findViewById(R.id.btnFilterPending);
         btnFilterApproved = findViewById(R.id.btnFilterApproved);
@@ -69,6 +75,10 @@ public class AdminBookingsActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        try { if (findViewById(R.id.bottomNavigation) != null) findViewById(R.id.bottomNavigation).post(() -> {
+            com.google.android.material.bottomnavigation.BottomNavigationView bn = findViewById(R.id.bottomNavigation);
+            if (bn != null) bn.setSelectedItemId(R.id.nav_bookings);
+        }); } catch (Exception ignored) {}
         loadAllBookings();
     }
 
@@ -77,12 +87,20 @@ public class AdminBookingsActivity extends AppCompatActivity {
         User user = spm.getUser();
         String token = user.getToken();
 
+        // Show loading indicator
+        progressBar.setVisibility(View.VISIBLE);
+        rvAdminBookings.setVisibility(View.GONE);
+        tvEmptyState.setVisibility(View.GONE);
+
         bookingService = ApiUtils.getBookingService();
         Call<List<Booking>> call = bookingService.getAllBookings(token);
 
         call.enqueue(new Callback<List<Booking>>() {
             @Override
             public void onResponse(Call<List<Booking>> call, Response<List<Booking>> response) {
+                // Hide loading indicator
+                progressBar.setVisibility(View.GONE);
+                
                 Log.d("AdminBookings", "Response: " + response.code());
 
                 if (response.code() == 200) {
@@ -92,17 +110,44 @@ public class AdminBookingsActivity extends AppCompatActivity {
                     } else {
                         showEmptyState();
                     }
-                } else if (response.code() == 401) {
-                    Toast.makeText(getApplicationContext(), "Session expired. Please login again.", Toast.LENGTH_LONG).show();
+                    // Initialize bottom nav selection for admin
+                    try {
+                        bottomNavigation = findViewById(R.id.bottomNavigation);
+                        bottomNavigation.setOnItemSelectedListener(item -> {
+                            int id = item.getItemId();
+                            if (id == R.id.nav_home) {
+                                Intent intent = new Intent(AdminBookingsActivity.this, AdminDashboardActivity.class);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                startActivity(intent);
+                                return true;
+                            } else if (id == R.id.nav_bookings) {
+                                // already here
+                                return true;
+                            } else if (id == R.id.nav_profile) {
+                                Intent intent = new Intent(AdminBookingsActivity.this, ProfileActivity.class);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                startActivity(intent);
+                                return true;
+                            }
+                            return false;
+                        });
+                        bottomNavigation.setSelectedItemId(R.id.nav_bookings);
+                    } catch (Exception ignored) {}
+                 } else if (response.code() == 401) {
+                    Toast.makeText(getApplicationContext(), Constants.MSG_SESSION_EXPIRED, Toast.LENGTH_LONG).show();
                     clearSessionAndRedirect();
                 } else {
-                    Toast.makeText(getApplicationContext(), "Error: " + response.message(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), Constants.MSG_GENERIC_ERROR, Toast.LENGTH_LONG).show();
+                    Log.e("AdminBookings", "Error: " + response.message());
                 }
             }
 
             @Override
             public void onFailure(Call<List<Booking>> call, Throwable t) {
-                Toast.makeText(getApplicationContext(), "Error connecting to server", Toast.LENGTH_LONG).show();
+                // Hide loading indicator
+                progressBar.setVisibility(View.GONE);
+                
+                Toast.makeText(getApplicationContext(), Constants.MSG_NETWORK_ERROR, Toast.LENGTH_LONG).show();
                 Log.e("AdminBookings", "Error: " + t.getMessage());
             }
         });
@@ -126,7 +171,17 @@ public class AdminBookingsActivity extends AppCompatActivity {
             showEmptyState();
         } else {
             if (adapter == null) {
-                adapter = new AdminBookingAdapter(filteredList, getApplicationContext());
+                adapter = new AdminBookingAdapter(filteredList, getApplicationContext(), new com.example.facilitybooking.adapters.AdminBookingAdapter.AdminActionListener() {
+                    @Override
+                    public void onApprove(Booking booking) {
+                        approveBooking(booking);
+                    }
+
+                    @Override
+                    public void onReject(Booking booking) {
+                        rejectBooking(booking);
+                    }
+                });
                 rvAdminBookings.setAdapter(adapter);
             } else {
                 adapter.updateList(filteredList);
@@ -180,11 +235,40 @@ public class AdminBookingsActivity extends AppCompatActivity {
     }
 
     private void approveBooking(Booking booking) {
+        // Show dialog to optionally capture an admin note before approval
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Approve Booking");
+
+        final EditText input = new EditText(this);
+        input.setHint("Optional note (e.g. additional instructions)");
+        input.setPadding(50, 20, 50, 20);
+        builder.setView(input);
+
+        builder.setPositiveButton("Approve", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String note = input.getText().toString().trim();
+                performApprove(booking, note);
+            }
+        });
+
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
+    }
+
+    // Actual network call to approve booking. Separated so we can show confirmation/note first.
+    private void performApprove(Booking booking, String adminNote) {
         SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
         User user = spm.getUser();
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        String updatedAt = sdf.format(new Date());
+        // Disable actions for this booking while request is in-flight
+        if (adapter != null) adapter.setProcessing(booking.getBookingID(), true);
 
         bookingService = ApiUtils.getBookingService();
         Call<Booking> call = bookingService.updateBooking(
@@ -197,24 +281,28 @@ public class AdminBookingsActivity extends AppCompatActivity {
                 booking.getEndTime(),
                 booking.getPurpose(),
                 "approved",
-                "",
+                adminNote == null ? "" : adminNote,
                 booking.getTotalCost()
         );
 
         call.enqueue(new Callback<Booking>() {
             @Override
             public void onResponse(Call<Booking> call, Response<Booking> response) {
+                // Clear processing state
+                if (adapter != null) adapter.setProcessing(booking.getBookingID(), false);
                 if (response.code() == 200) {
-                    Toast.makeText(AdminBookingsActivity.this, "Booking approved!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AdminBookingsActivity.this, Constants.MSG_BOOKING_APPROVED, Toast.LENGTH_SHORT).show();
                     loadAllBookings();
                 } else {
-                    Toast.makeText(AdminBookingsActivity.this, "Error: " + response.message(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AdminBookingsActivity.this, Constants.MSG_GENERIC_ERROR, Toast.LENGTH_SHORT).show();
+                    Log.e("AdminBookings", "Error: " + response.message());
                 }
             }
 
             @Override
             public void onFailure(Call<Booking> call, Throwable t) {
-                Toast.makeText(AdminBookingsActivity.this, "Error connecting to server", Toast.LENGTH_SHORT).show();
+                if (adapter != null) adapter.setProcessing(booking.getBookingID(), false);
+                Toast.makeText(AdminBookingsActivity.this, Constants.MSG_NETWORK_ERROR, Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -254,6 +342,9 @@ public class AdminBookingsActivity extends AppCompatActivity {
         SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
         User user = spm.getUser();
 
+        // Disable actions for this booking while request is in-flight
+        if (adapter != null) adapter.setProcessing(booking.getBookingID(), true);
+
         bookingService = ApiUtils.getBookingService();
         Call<Booking> call = bookingService.updateBooking(
                 user.getToken(),
@@ -272,25 +363,30 @@ public class AdminBookingsActivity extends AppCompatActivity {
         call.enqueue(new Callback<Booking>() {
             @Override
             public void onResponse(Call<Booking> call, Response<Booking> response) {
+                if (adapter != null) adapter.setProcessing(booking.getBookingID(), false);
                 if (response.code() == 200) {
-                    Toast.makeText(AdminBookingsActivity.this, "Booking rejected!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AdminBookingsActivity.this, Constants.MSG_BOOKING_REJECTED, Toast.LENGTH_SHORT).show();
                     loadAllBookings();
                 } else {
-                    Toast.makeText(AdminBookingsActivity.this, "Error: " + response.message(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AdminBookingsActivity.this, Constants.MSG_GENERIC_ERROR, Toast.LENGTH_SHORT).show();
+                    Log.e("AdminBookings", "Error: " + response.message());
                 }
             }
 
             @Override
             public void onFailure(Call<Booking> call, Throwable t) {
-                Toast.makeText(AdminBookingsActivity.this, "Error connecting to server", Toast.LENGTH_SHORT).show();
+                if (adapter != null) adapter.setProcessing(booking.getBookingID(), false);
+                Toast.makeText(AdminBookingsActivity.this, Constants.MSG_NETWORK_ERROR, Toast.LENGTH_SHORT).show();
             }
         });
     }
 
+    // ========== CONFIRMATION DIALOG FOR DELETE ACTION ==========
     private void deleteBooking(Booking booking) {
+        // Show confirmation dialog before deleting to prevent accidental deletions
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Delete Booking");
-        builder.setMessage("Are you sure you want to delete this booking?");
+        builder.setMessage(Constants.MSG_CONFIRM_DELETE);
 
         builder.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
             @Override
@@ -320,16 +416,17 @@ public class AdminBookingsActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<DeleteResponse> call, Response<DeleteResponse> response) {
                 if (response.code() == 200) {
-                    Toast.makeText(AdminBookingsActivity.this, "Booking deleted!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AdminBookingsActivity.this, Constants.MSG_BOOKING_DELETED, Toast.LENGTH_SHORT).show();
                     loadAllBookings();
                 } else {
-                    Toast.makeText(AdminBookingsActivity.this, "Error: " + response.message(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AdminBookingsActivity.this, Constants.MSG_GENERIC_ERROR, Toast.LENGTH_SHORT).show();
+                    Log.e("AdminBookings", "Error: " + response.message());
                 }
             }
 
             @Override
             public void onFailure(Call<DeleteResponse> call, Throwable t) {
-                Toast.makeText(AdminBookingsActivity.this, "Error connecting to server", Toast.LENGTH_SHORT).show();
+                Toast.makeText(AdminBookingsActivity.this, Constants.MSG_NETWORK_ERROR, Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -342,3 +439,12 @@ public class AdminBookingsActivity extends AppCompatActivity {
         startActivity(intent);
     }
 }
+
+
+
+
+
+
+
+
+

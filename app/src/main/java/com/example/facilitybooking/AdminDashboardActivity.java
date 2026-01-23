@@ -1,5 +1,6 @@
 package com.example.facilitybooking;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.TextView;
@@ -9,6 +10,7 @@ import androidx.cardview.widget.CardView;
 
 import com.example.facilitybooking.models.User;
 import com.example.facilitybooking.sharedpref.SharedPrefManager;
+import com.example.facilitybooking.utils.Constants;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class AdminDashboardActivity extends AppCompatActivity {
@@ -18,6 +20,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private CardView cardAllBookings;
     private BottomNavigationView bottomNavigation;
 
+    @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,6 +39,16 @@ public class AdminDashboardActivity extends AppCompatActivity {
         }
 
         User user = spm.getUser();
+        
+        // ========== ROLE-BASED ACCESS CONTROL ==========
+        // Only admins should access this dashboard
+        // Redirect regular users to UserDashboardActivity
+        if (!Constants.isAdmin(user.getRole())) {
+            finish();
+            startActivity(new Intent(this, UserDashboardActivity.class));
+            return;
+        }
+        
         tvWelcome.setText("Welcome, " + user.getUsername() + "!");
 
         cardManageFacilities.setOnClickListener(v ->
@@ -54,15 +67,25 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 // already here
                 return true;
             } else if (id == R.id.nav_bookings) {
-                startActivity(new Intent(this, AdminBookingsActivity.class));
+                Intent intent = new Intent(this, AdminBookingsActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
                 return true;
             } else if (id == R.id.nav_profile) {
-                startActivity(new Intent(this, ProfileActivity.class));
+                Intent intent = new Intent(this, ProfileActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
                 return true;
             }
             return false;
         });
         bottomNavigation.setSelectedItemId(R.id.nav_home);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (bottomNavigation != null) bottomNavigation.setSelectedItemId(R.id.nav_home);
     }
 }
 

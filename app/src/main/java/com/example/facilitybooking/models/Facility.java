@@ -10,6 +10,7 @@ public class Facility {
     private String status;
     private String createdAt;
     private String updatedAt;
+    private String imageUrl; // new optional image URL
 
     public Facility() {}
 
@@ -40,6 +41,9 @@ public class Facility {
     public String getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
 
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
     @Override
     public String toString() {
         return "Facility{" +
@@ -48,6 +52,7 @@ public class Facility {
                 ", capacity=" + capacity +
                 ", hourlyRate=" + hourlyRate +
                 ", status='" + status + '\'' +
+                ", imageUrl='" + imageUrl + '\'' +
                 '}';
     }
 }

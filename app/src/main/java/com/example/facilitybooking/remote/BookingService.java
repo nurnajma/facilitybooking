@@ -31,6 +31,14 @@ public interface BookingService {
                                 @Field("status") String status,
                                 @Field("totalCost") double totalCost);
 
+    // Fallback: send JSON body instead of form-encoded fields. Some backends expect JSON.
+    @POST("bookings")
+    Call<Booking> createBookingJson(@Header("api-key") String apiKey, @Body Booking booking);
+
+    // More explicit JSON fallback that sends raw key/value map to control field names
+    @POST("bookings")
+    Call<Booking> createBookingJsonMap(@Header("api-key") String apiKey, @Body java.util.Map<String, Object> body);
+
     @FormUrlEncoded
     @POST("bookings/{id}")
     Call<Booking> updateBooking(@Header("api-key") String apiKey, @Path("id") int id,

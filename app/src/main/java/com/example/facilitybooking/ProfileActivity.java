@@ -72,13 +72,18 @@ public class ProfileActivity extends AppCompatActivity {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
                 Intent homeIntent = new Intent(this, isAdmin ? AdminDashboardActivity.class : UserDashboardActivity.class);
+                homeIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                 startActivity(homeIntent);
                 return true;
             } else if (id == R.id.nav_my_bookings && !isAdmin) {
-                startActivity(new Intent(this, MyBookingsActivity.class));
+                Intent intent = new Intent(this, MyBookingsActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
                 return true;
             } else if (id == R.id.nav_bookings && isAdmin) {
-                startActivity(new Intent(this, AdminBookingsActivity.class));
+                Intent intent = new Intent(this, AdminBookingsActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
                 return true;
             } else if (id == R.id.nav_profile) {
                 // already here
@@ -89,5 +94,11 @@ public class ProfileActivity extends AppCompatActivity {
 
         bottomNavigation.setSelectedItemId(R.id.nav_profile);
     }
-}
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Ensure selected item matches profile
+        if (bottomNavigation != null) bottomNavigation.setSelectedItemId(R.id.nav_profile);
+    }
+}

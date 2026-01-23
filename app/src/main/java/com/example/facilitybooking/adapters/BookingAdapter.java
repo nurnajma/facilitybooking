@@ -11,17 +11,27 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.facilitybooking.R;
 import com.example.facilitybooking.models.Booking;
+import com.example.facilitybooking.utils.Constants;
+import com.example.facilitybooking.remote.ApiUtils;
+import com.example.facilitybooking.remote.FacilityService;
+import com.example.facilitybooking.sharedpref.SharedPrefManager;
+import com.example.facilitybooking.models.Facility;
+import com.example.facilitybooking.models.User;
 import java.util.List;
 
 public class BookingAdapter extends RecyclerView.Adapter<BookingAdapter.ViewHolder> {
 
     private List<Booking> bookingList;
     private Context mContext;
+    private FacilityService facilityService;
+    private SharedPrefManager spm;
     private int currentPos;
 
     public BookingAdapter(List<Booking> bookingList, Context context) {
         this.bookingList = bookingList;
         this.mContext = context;
+        this.facilityService = ApiUtils.getFacilityService();
+        this.spm = new SharedPrefManager(context);
     }
 
     @NonNull
@@ -35,11 +45,40 @@ public class BookingAdapter extends RecyclerView.Adapter<BookingAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Booking booking = bookingList.get(position);
 
-        // Set facility name (if available)
-        if (booking.getFacility() != null) {
+        // Set facility name (if available). If not present, fetch by ID.
+        if (booking.getFacility() != null && booking.getFacility().getFacilityName() != null && !booking.getFacility().getFacilityName().isEmpty()) {
             holder.tvFacilityName.setText(booking.getFacility().getFacilityName());
         } else {
-            holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+            holder.tvFacilityName.setText("Loading facility...");
+            // Fetch facility name asynchronously
+            try {
+                User user = spm.getUser();
+                if (user != null) {
+                    int fid = booking.getFacilityID();
+                    facilityService.getFacility(user.getToken(), fid).enqueue(new retrofit2.Callback<Facility>() {
+                        @Override
+                        public void onResponse(retrofit2.Call<Facility> call, retrofit2.Response<Facility> response) {
+                            if (response.isSuccessful() && response.body() != null) {
+                                String name = response.body().getFacilityName();
+                                holder.tvFacilityName.setText(name);
+                                // also cache into booking object for reuse
+                                booking.setFacility(response.body());
+                            } else {
+                                holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(retrofit2.Call<Facility> call, Throwable t) {
+                            holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+                        }
+                    });
+                } else {
+                    holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+                }
+            } catch (Exception e) {
+                holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+            }
         }
 
         // Set date and time
@@ -53,30 +92,19 @@ public class BookingAdapter extends RecyclerView.Adapter<BookingAdapter.ViewHold
         // Set cost
         holder.tvCost.setText("RM " + String.format("%.2f", booking.getTotalCost()));
 
-        // Set status with color
-        String status = booking.getStatus().toUpperCase();
-        holder.tvStatus.setText(status);
+        // ========== STATUS DISPLAY WITH COLOR INDICATORS ==========
+        // Normalize status to uppercase for consistency
+        String status = Constants.normalizeStatus(booking.getStatus());
+        holder.tvStatus.setText(status != null ? status.toUpperCase() : "");
 
-        switch (status) {
-            case "PENDING":
-                holder.tvStatus.setBackgroundColor(Color.parseColor("#FF9800")); // Orange
-                break;
-            case "APPROVED":
-                holder.tvStatus.setBackgroundColor(Color.parseColor("#4CAF50")); // Green
-                break;
-            case "REJECTED":
-                holder.tvStatus.setBackgroundColor(Color.parseColor("#F44336")); // Red
-                break;
-            case "COMPLETED":
-                holder.tvStatus.setBackgroundColor(Color.parseColor("#2196F3")); // Blue
-                break;
-            case "CANCELLED":
-                holder.tvStatus.setBackgroundColor(Color.parseColor("#9E9E9E")); // Grey
-                break;
-        }
+        // Apply background color and set text color for contrast
+        int statusColor = Constants.getStatusColor(status);
+        holder.tvStatus.setBackgroundColor(statusColor);
+        holder.tvStatus.setTextColor(Color.WHITE);
 
         // Show admin notes if rejected
-        if ("REJECTED".equals(status) && booking.getAdminNotes() != null && !booking.getAdminNotes().isEmpty()) {
+        // This helps users understand why their booking was rejected
+        if (Constants.STATUS_REJECTED.equals(status) && booking.getAdminNotes() != null && !booking.getAdminNotes().isEmpty()) {
             holder.layoutAdminNotes.setVisibility(View.VISIBLE);
             holder.tvAdminNotes.setText(booking.getAdminNotes());
         } else {

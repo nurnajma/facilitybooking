@@ -101,16 +101,56 @@
                     android:background="#E0E0E0"
                     android:layout_marginBottom="16dp" />
 
-                <!-- Facility Name -->
-                <TextView
-                    android:id="@+id/tvFacilityName"
-                    android:layout_width="wrap_content"
+                <!-- User/Booked By -->
+                <LinearLayout
+                    android:id="@+id/layoutUser"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Conference Room A"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="#333333"
-                    android:layout_marginBottom="16dp" />
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="👤 Booked By: "
+                        android:textSize="14sp"
+                        android:textColor="#666666" />
+
+                    <TextView
+                        android:id="@+id/tvUser"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Loading..."
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#333333" />
+
+                </LinearLayout>
+
+                <!-- Facility Name -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🏢 Facility: "
+                        android:textSize="14sp"
+                        android:textColor="#666666" />
+
+                    <TextView
+                        android:id="@+id/tvFacilityName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Loading..."
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#333333" />
+
+                </LinearLayout>
 
                 <!-- Date -->
                 <LinearLayout
@@ -218,7 +258,7 @@
 
         </androidx.cardview.widget.CardView>
 
-        <!-- Admin Notes (if rejected) -->
+        <!-- Admin Notes -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardAdminNotes"
             android:layout_width="match_parent"
@@ -236,6 +276,7 @@
                 android:padding="16dp">
 
                 <TextView
+                    android:id="@+id/tvAdminNotesLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="❌ Rejection Reason"
@@ -256,7 +297,7 @@
 
         </androidx.cardview.widget.CardView>
 
-        <!-- Action Buttons -->
+        <!-- User Action Buttons -->
         <LinearLayout
             android:id="@+id/layoutActions"
             android:layout_width="match_parent"
@@ -279,6 +320,36 @@
                 android:layout_height="56dp"
                 android:layout_weight="1"
                 android:text="Cancel"
+                android:textSize="16sp"
+                android:backgroundTint="#F44336"
+                android:layout_marginStart="8dp" />
+
+        </LinearLayout>
+
+        <!-- Admin Action Buttons -->
+        <LinearLayout
+            android:id="@+id/layoutAdminActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btnApproveBooking"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="1"
+                android:text="Approve"
+                android:textSize="16sp"
+                android:backgroundTint="#4CAF50"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btnRejectBooking"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="1"
+                android:text="Reject"
                 android:textSize="16sp"
                 android:backgroundTint="#F44336"
                 android:layout_marginStart="8dp" />

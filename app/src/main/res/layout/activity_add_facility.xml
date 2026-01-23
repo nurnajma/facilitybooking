@@ -136,6 +136,32 @@
                     android:inputType="text"
                     android:layout_marginBottom="16dp" />
 
+                <!-- Image URL -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Image URL (optional)"
+                    android:textSize="14sp"
+                    android:textColor="#666666"
+                    android:layout_marginBottom="4dp" />
+
+                <ImageView
+                    android:id="@+id/ivImagePreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="160dp"
+                    android:scaleType="centerCrop"
+                    android:src="@android:drawable/ic_menu_gallery"
+                    android:contentDescription="Image preview"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="visible" />
+
+                <Button
+                    android:id="@+id/btnChooseImage"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Choose Image"
+                    android:layout_marginBottom="16dp" />
+
                 <!-- Status -->
                 <TextView
                     android:layout_width="wrap_content"
