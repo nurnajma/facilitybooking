@@ -267,6 +267,15 @@ public class AdminBookingsActivity extends AppCompatActivity {
         SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
         User user = spm.getUser();
 
+        // Ensure facilityID is available (some APIs return facilityId / embedded facility object)
+        if (booking.getFacilityID() <= 0 && booking.getFacility() != null) {
+            try { booking.setFacilityID(booking.getFacility().getFacilityID()); } catch (Exception ignored) {}
+        }
+        if (booking.getFacilityID() <= 0) {
+            Toast.makeText(this, "Cannot approve: missing facility ID for this booking.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         // Disable actions for this booking while request is in-flight
         if (adapter != null) adapter.setProcessing(booking.getBookingID(), true);
 
@@ -296,6 +305,11 @@ public class AdminBookingsActivity extends AppCompatActivity {
                 } else {
                     Toast.makeText(AdminBookingsActivity.this, Constants.MSG_GENERIC_ERROR, Toast.LENGTH_SHORT).show();
                     Log.e("AdminBookings", "Error: " + response.message());
+                    try {
+                        if (response.errorBody() != null) {
+                            Log.e("AdminBookings", "ErrorBody: " + response.errorBody().string());
+                        }
+                    } catch (Exception ignored) {}
                 }
             }
 
@@ -342,6 +356,15 @@ public class AdminBookingsActivity extends AppCompatActivity {
         SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
         User user = spm.getUser();
 
+        // Ensure facilityID is available before update call
+        if (booking.getFacilityID() <= 0 && booking.getFacility() != null) {
+            try { booking.setFacilityID(booking.getFacility().getFacilityID()); } catch (Exception ignored) {}
+        }
+        if (booking.getFacilityID() <= 0) {
+            Toast.makeText(this, "Cannot reject: missing facility ID for this booking.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         // Disable actions for this booking while request is in-flight
         if (adapter != null) adapter.setProcessing(booking.getBookingID(), true);
 
@@ -370,6 +393,11 @@ public class AdminBookingsActivity extends AppCompatActivity {
                 } else {
                     Toast.makeText(AdminBookingsActivity.this, Constants.MSG_GENERIC_ERROR, Toast.LENGTH_SHORT).show();
                     Log.e("AdminBookings", "Error: " + response.message());
+                    try {
+                        if (response.errorBody() != null) {
+                            Log.e("AdminBookings", "ErrorBody: " + response.errorBody().string());
+                        }
+                    } catch (Exception ignored) {}
                 }
             }
 

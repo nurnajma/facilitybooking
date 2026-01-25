@@ -1,15 +1,36 @@
 package com.example.facilitybooking.models;
 
+import com.google.gson.annotations.SerializedName;
+
 public class Facility {
+    @SerializedName(value = "facilityID", alternate = {"facility_id", "facilityId", "id"})
     private int facilityID;
+
+    @SerializedName(value = "facilityName", alternate = {"facility_name", "name"})
     private String facilityName;
+
+    @SerializedName(value = "description", alternate = {"facilityDescription"})
     private String description;
+
+    @SerializedName(value = "capacity", alternate = {"maxCapacity"})
     private int capacity;
+
+    @SerializedName(value = "hourlyRate", alternate = {"hourly_rate", "rate"})
     private double hourlyRate;
+
+    @SerializedName(value = "location", alternate = {"facilityLocation"})
     private String location;
+
+    @SerializedName(value = "status", alternate = {"facilityStatus"})
     private String status;
+
+    @SerializedName(value = "createdAt", alternate = {"created_at"})
     private String createdAt;
+
+    @SerializedName(value = "updatedAt", alternate = {"updated_at"})
     private String updatedAt;
+
+    @SerializedName(value = "imageUrl", alternate = {"image_url", "image"})
     private String imageUrl; // new optional image URL
 
     public Facility() {}

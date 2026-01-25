@@ -52,16 +52,39 @@ public class BookingDeserializer implements JsonDeserializer<Booking> {
             }
 
             // facilityID or facility object
+            // Common backend variations: facilityID, facilityId, facility_id, facility (id or object)
             if (obj.has("facilityID") && !obj.get("facilityID").isJsonNull()) {
                 try { b.setFacilityID(obj.get("facilityID").getAsInt()); } catch (Exception ignored) {}
-            } else if (obj.has("facility") && obj.get("facility").isJsonObject()) {
-                try {
-                    Facility f = context.deserialize(obj.get("facility"), Facility.class);
-                    b.setFacility(f);
-                    b.setFacilityID(f.getFacilityID());
-                } catch (Exception ignored) {}
+            } else if (obj.has("facilityId") && !obj.get("facilityId").isJsonNull()) {
+                try { b.setFacilityID(obj.get("facilityId").getAsInt()); } catch (Exception ignored) {}
             } else if (obj.has("facility_id") && !obj.get("facility_id").isJsonNull()) {
                 try { b.setFacilityID(obj.get("facility_id").getAsInt()); } catch (Exception ignored) {}
+            } else if (obj.has("facility") && !obj.get("facility").isJsonNull()) {
+                JsonElement facilityEl = obj.get("facility");
+                if (facilityEl.isJsonPrimitive()) {
+                    // sometimes backend returns facility: 123
+                    try { b.setFacilityID(facilityEl.getAsInt()); } catch (Exception ignored) {}
+                } else if (facilityEl.isJsonObject()) {
+                    try {
+                        Facility f = context.deserialize(facilityEl, Facility.class);
+                        b.setFacility(f);
+                        int fid = (f == null) ? 0 : f.getFacilityID();
+                        if (fid <= 0) {
+                            // extra safety in case Facility mapping fails
+                            JsonObject fObj = facilityEl.getAsJsonObject();
+                            if (fObj.has("facilityID") && !fObj.get("facilityID").isJsonNull()) {
+                                try { fid = fObj.get("facilityID").getAsInt(); } catch (Exception ignored) {}
+                            } else if (fObj.has("facilityId") && !fObj.get("facilityId").isJsonNull()) {
+                                try { fid = fObj.get("facilityId").getAsInt(); } catch (Exception ignored) {}
+                            } else if (fObj.has("facility_id") && !fObj.get("facility_id").isJsonNull()) {
+                                try { fid = fObj.get("facility_id").getAsInt(); } catch (Exception ignored) {}
+                            } else if (fObj.has("id") && !fObj.get("id").isJsonNull()) {
+                                try { fid = fObj.get("id").getAsInt(); } catch (Exception ignored) {}
+                            }
+                        }
+                        if (fid > 0) b.setFacilityID(fid);
+                    } catch (Exception ignored) {}
+                }
             }
 
             // bookingDate
