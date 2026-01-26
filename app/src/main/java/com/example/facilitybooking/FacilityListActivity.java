@@ -2,7 +2,6 @@ package com.example.facilitybooking;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.ContextMenu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -14,15 +13,18 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.facilitybooking.adapters.FacilityAdapter;
 import com.example.facilitybooking.models.Facility;
 import com.example.facilitybooking.models.User;
+import com.example.facilitybooking.models.DeleteResponse;
 import com.example.facilitybooking.remote.ApiUtils;
 import com.example.facilitybooking.remote.FacilityService;
-import com.example.facilitybooking.models.DeleteResponse;
 import com.example.facilitybooking.sharedpref.SharedPrefManager;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import java.util.List;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -50,18 +52,20 @@ public class FacilityListActivity extends AppCompatActivity {
         SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
         if (spm.isAdmin()) {
             fabAddFacility.setVisibility(View.VISIBLE);
-            fabAddFacility.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Intent intent = new Intent(FacilityListActivity.this, AddFacilityActivity.class);
-                    startActivity(intent);
-                }
+            fabAddFacility.setOnClickListener(v -> {
+                Intent intent = new Intent(FacilityListActivity.this, AddFacilityActivity.class);
+                startActivity(intent);
             });
         } else {
-            // Hide the add button for normal/public users
             fabAddFacility.setVisibility(View.GONE);
         }
 
+        loadFacilities();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
         loadFacilities();
     }
 
@@ -76,12 +80,11 @@ public class FacilityListActivity extends AppCompatActivity {
         call.enqueue(new Callback<List<Facility>>() {
             @Override
             public void onResponse(Call<List<Facility>> call, Response<List<Facility>> response) {
-                Log.d("FacilityList", "Response: " + response.code());
-
                 if (response.code() == 200) {
                     List<Facility> facilities = response.body();
                     if (facilities != null && !facilities.isEmpty()) {
-                        adapter = new FacilityAdapter(facilities, FacilityListActivity.this);
+                        adapter = new FacilityAdapter(FacilityListActivity.this, true);
+                        adapter.submitList(facilities);
                         rvFacilityList.setAdapter(adapter);
                         tvEmptyState.setVisibility(View.GONE);
                         rvFacilityList.setVisibility(View.VISIBLE);
@@ -99,7 +102,6 @@ public class FacilityListActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<List<Facility>> call, Throwable t) {
                 Toast.makeText(getApplicationContext(), "Error connecting to server", Toast.LENGTH_LONG).show();
-                Log.e("FacilityList", "Error: " + t.getMessage());
             }
         });
     }
@@ -109,105 +111,10 @@ public class FacilityListActivity extends AppCompatActivity {
         rvFacilityList.setVisibility(View.GONE);
     }
 
-    @Override
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-        super.onCreateContextMenu(menu, v, menuInfo);
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.facility_context_menu, menu);
-
-        SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
-        if (!spm.isAdmin()) {
-            menu.findItem(R.id.menu_update_facility).setVisible(false);
-            menu.findItem(R.id.menu_delete_facility).setVisible(false);
-        }
-    }
-
-    @Override
-    public boolean onContextItemSelected(MenuItem item) {
-        Facility selectedFacility = adapter.getSelectedItem();
-
-        if (selectedFacility == null) {
-            Toast.makeText(this, "No facility selected", Toast.LENGTH_SHORT).show();
-            return super.onContextItemSelected(item);
-        }
-
-        int itemId = item.getItemId();
-
-        if (itemId == R.id.menu_view_details) {
-            viewFacilityDetails(selectedFacility);
-        } else if (itemId == R.id.menu_book_facility) {
-            bookFacility(selectedFacility);
-        } else if (itemId == R.id.menu_update_facility) {
-            Toast.makeText(this, "Update facility: " + selectedFacility.getFacilityName(), Toast.LENGTH_SHORT).show();
-        } else if (itemId == R.id.menu_delete_facility) {
-            // Confirm deletion
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("Delete Facility");
-            builder.setMessage("Are you sure you want to delete " + selectedFacility.getFacilityName() + "?");
-            builder.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    performDelete(selectedFacility);
-                }
-            });
-            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    dialog.cancel();
-                }
-            });
-            builder.show();
-        }
-
-        return super.onContextItemSelected(item);
-    }
-
-    private void viewFacilityDetails(Facility facility) {
-        Intent intent = new Intent(this, FacilityDetailsActivity.class);
-        intent.putExtra("facilityID", facility.getFacilityID());
-        startActivity(intent);
-    }
-
-    private void bookFacility(Facility facility) {
-        Intent intent = new Intent(this, CreateBookingActivity.class);
-        intent.putExtra("facilityID", facility.getFacilityID());
-        intent.putExtra("facilityName", facility.getFacilityName());
-        intent.putExtra("capacity", facility.getCapacity());
-        intent.putExtra("hourlyRate", facility.getHourlyRate());
-        startActivity(intent);
-    }
-
     private void clearSessionAndRedirect() {
         SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
         spm.logout();
         finish();
-        Intent intent = new Intent(this, LoginActivity.class);
-        startActivity(intent);
-    }
-
-    private void performDelete(Facility facility) {
-        SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
-        User user = spm.getUser();
-
-        facilityService = ApiUtils.getFacilityService();
-        Call<DeleteResponse> call = facilityService.deleteFacility(user.getToken(), facility.getFacilityID());
-
-        call.enqueue(new Callback<DeleteResponse>() {
-            @Override
-            public void onResponse(Call<DeleteResponse> call, Response<DeleteResponse> response) {
-                if (response.code() == 200) {
-                    Toast.makeText(FacilityListActivity.this, "Facility deleted successfully!", Toast.LENGTH_SHORT).show();
-                    loadFacilities();
-                } else {
-                    Toast.makeText(FacilityListActivity.this, "Error: " + response.message(), Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<DeleteResponse> call, Throwable t) {
-                Toast.makeText(FacilityListActivity.this, "Error connecting to server", Toast.LENGTH_SHORT).show();
-                Log.e("FacilityList", "Delete error: " + (t == null ? "unknown" : t.getMessage()));
-            }
-        });
+        startActivity(new Intent(this, LoginActivity.class));
     }
 }

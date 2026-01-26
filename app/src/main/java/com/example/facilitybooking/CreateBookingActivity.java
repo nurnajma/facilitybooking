@@ -86,6 +86,19 @@ public class CreateBookingActivity extends AppCompatActivity {
         facility.setCapacity(intent.getIntExtra("capacity", 0));
         facility.setHourlyRate(intent.getDoubleExtra("hourlyRate", 0.0));
 
+        // Validate facilityID early
+        if (facility.getFacilityID() <= 0) {
+            Log.e("CreateBooking", "Invalid facilityID received: " + facility.getFacilityID());
+            Toast.makeText(
+                    this,
+                    "Error: Facility data not loaded properly. Please reopen the facility page.",
+                    Toast.LENGTH_LONG
+            ).show();
+            finish();
+            return;
+        }
+
+
         tvFacilityName.setText(facility.getFacilityName());
         tvFacilityInfo.setText("Capacity: " + facility.getCapacity() + " | RM " + String.format("%.2f", facility.getHourlyRate()) + "/hr");
 
@@ -127,7 +140,8 @@ public class CreateBookingActivity extends AppCompatActivity {
     }
 
     private void calculateCost() {
-        if (tvStartTime.getText().equals("Select time") || tvEndTime.getText().equals("Select time")) return;
+        if ("Select time".contentEquals(tvStartTime.getText())
+                || "Select time".contentEquals(tvEndTime.getText())) return;
 
         long diff = endTime.getTimeInMillis() - startTime.getTimeInMillis();
         if (diff <= 0) {
@@ -143,6 +157,17 @@ public class CreateBookingActivity extends AppCompatActivity {
     }
 
     private void checkAvailabilityAndSubmit() {
+
+        if (facility == null || facility.getFacilityID() <= 0) {
+            Log.e("CreateBooking", "FacilityID missing before availability check");
+            Toast.makeText(
+                    this,
+                    "Facility not found. Cannot create booking.",
+                    Toast.LENGTH_LONG
+            ).show();
+            return;
+        }
+
         // 1. Basic Local Validation
         if (tvSelectedDate.getText().equals("Select date")) {
             Toast.makeText(this, Constants.MSG_SELECT_DATE, Toast.LENGTH_SHORT).show();
@@ -152,10 +177,10 @@ public class CreateBookingActivity extends AppCompatActivity {
             Toast.makeText(this, "Please select both start and end times", Toast.LENGTH_SHORT).show();
             return;
         }
-        
+
         String startStr = timeFormat.format(startTime.getTime());
         String endStr = timeFormat.format(endTime.getTime());
-        
+
         if (!BookingValidationUtils.isValidTimeRange(startStr, endStr)) {
             Toast.makeText(this, Constants.MSG_INVALID_TIME_RANGE, Toast.LENGTH_SHORT).show();
             return;
@@ -197,8 +222,25 @@ public class CreateBookingActivity extends AppCompatActivity {
                 } else {
                     setProgressVisible(false);
                     btnSubmitBooking.setEnabled(true);
-                    Toast.makeText(CreateBookingActivity.this, "Failed to verify availability", Toast.LENGTH_SHORT).show();
+
+                    Log.e("CreateBooking",
+                            "Availability check failed. Code=" + response.code());
+
+                    if (response.code() == 404) {
+                        Toast.makeText(
+                                CreateBookingActivity.this,
+                                "Facility not found in database. It may have been deleted.",
+                                Toast.LENGTH_LONG
+                        ).show();
+                    } else {
+                        Toast.makeText(
+                                CreateBookingActivity.this,
+                                "Failed to verify availability. Please try again.",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    }
                 }
+
             }
 
             @Override
@@ -218,6 +260,10 @@ public class CreateBookingActivity extends AppCompatActivity {
         double totalCost = hours * facility.getHourlyRate();
 
         BookingService bookingService = ApiUtils.getBookingService();
+        Log.d("CreateBooking",
+                "Creating booking with facilityID=" + facility.getFacilityID()
+                        + ", userID=" + user.getId());
+
         bookingService.createBooking(
                 user.getToken(),
                 user.getId(),

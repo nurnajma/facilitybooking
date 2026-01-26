@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Facility Booking</string>
+    <string name="manage_facilities_title">Manage Facilities</string>
+    <string name="manage_facilities_subtitle">Add, update, or delete facilities</string>
+    <string name="no_facilities">No facilities available</string>
+    <string name="add_new_facility">Add New Facility</string>
 </resources>

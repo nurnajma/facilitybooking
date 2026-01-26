@@ -54,10 +54,10 @@ public class BookingDetailsActivity extends AppCompatActivity {
         tvAdminNotes = findViewById(R.id.tvAdminNotes);
         tvAdminNotesLabel = findViewById(R.id.tvAdminNotesLabel);
         cardAdminNotes = findViewById(R.id.cardAdminNotes);
-        
+
         layoutActions = findViewById(R.id.layoutActions);
         layoutAdminActions = findViewById(R.id.layoutAdminActions);
-        
+
         btnEditBooking = findViewById(R.id.btnEditBooking);
         btnCancelBooking = findViewById(R.id.btnCancelBooking);
         btnApproveBooking = findViewById(R.id.btnApproveBooking);
@@ -146,7 +146,7 @@ public class BookingDetailsActivity extends AppCompatActivity {
         String start = booking.getStartTime() != null && booking.getStartTime().length() >= 5 ? booking.getStartTime().substring(0, 5) : "00:00";
         String end = booking.getEndTime() != null && booking.getEndTime().length() >= 5 ? booking.getEndTime().substring(0, 5) : "00:00";
         tvTime.setText(start + " - " + end);
-        
+
         tvPurpose.setText(booking.getPurpose());
         tvCost.setText(String.format(Locale.getDefault(), "RM %.2f", booking.getTotalCost()));
 
@@ -210,7 +210,7 @@ public class BookingDetailsActivity extends AppCompatActivity {
     private void rejectBooking() {
         final EditText input = new EditText(this);
         input.setHint("Reason for rejection");
-        
+
         new AlertDialog.Builder(this)
                 .setTitle("Reject Booking")
                 .setMessage("Please provide a reason for rejection:")
@@ -226,7 +226,7 @@ public class BookingDetailsActivity extends AppCompatActivity {
     private void updateBookingStatus(String newStatus, String adminNotes) {
         User user = spm.getUser();
         BookingService bookingService = ApiUtils.getBookingService();
-        
+
         Call<Booking> call = bookingService.updateBooking(
                 user.getToken(),
                 booking.getBookingID(),
@@ -249,7 +249,7 @@ public class BookingDetailsActivity extends AppCompatActivity {
                     if (Constants.STATUS_APPROVED.equals(newStatus)) msg = Constants.MSG_BOOKING_APPROVED;
                     else if (Constants.STATUS_REJECTED.equals(newStatus)) msg = Constants.MSG_BOOKING_REJECTED;
                     else if (Constants.STATUS_CANCELLED.equals(newStatus)) msg = Constants.MSG_BOOKING_CANCELLED;
-                    
+
                     Toast.makeText(BookingDetailsActivity.this, msg, Toast.LENGTH_SHORT).show();
                     finish();
                 } else {

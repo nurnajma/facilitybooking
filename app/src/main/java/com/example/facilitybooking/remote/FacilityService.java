@@ -43,16 +43,16 @@ public interface FacilityService {
     @Multipart
     @POST("facilities/{id}/images")
     Call<com.example.facilitybooking.models.ImageResponse> uploadFacilityImage(@Header("api-key") String apiKey,
-                                                                           @Path("id") int facilityId,
-                                                                           @Part MultipartBody.Part file);
+                                                                               @Path("id") int facilityId,
+                                                                               @Part MultipartBody.Part file);
 
     // Add image record by URL (fallback)
     @FormUrlEncoded
     @POST("facilities/{id}/images")
     Call<com.example.facilitybooking.models.ImageResponse> addFacilityImageByUrl(@Header("api-key") String apiKey,
-                                                                               @Path("id") int facilityId,
-                                                                               @Field("imageUrl") String imageUrl,
-                                                                               @Field("isPrimary") int isPrimary);
+                                                                                 @Path("id") int facilityId,
+                                                                                 @Field("imageUrl") String imageUrl,
+                                                                                 @Field("isPrimary") int isPrimary);
 
     // Get images for a facility
     @GET("facilities/{id}/images")

@@ -100,12 +100,35 @@ public class AdminBookingsActivity extends AppCompatActivity {
             public void onResponse(Call<List<Booking>> call, Response<List<Booking>> response) {
                 // Hide loading indicator
                 progressBar.setVisibility(View.GONE);
-                
+
                 Log.d("AdminBookings", "Response: " + response.code());
 
                 if (response.code() == 200) {
                     allBookings = response.body();
                     if (allBookings != null && !allBookings.isEmpty()) {
+                        // Log facility IDs for debugging and fix invalid facilityIDs
+                        for (Booking b : allBookings) {
+                            int facilityID = b.getFacilityID();
+                            // Try to get facilityID from facility object if available
+                            if (facilityID <= 0 && b.getFacility() != null && b.getFacility().getFacilityID() > 0) {
+                                facilityID = b.getFacility().getFacilityID();
+                                b.setFacilityID(facilityID);
+                                Log.d("AdminBookings", "Fixed facilityID from facility object: " + facilityID + " for booking " + b.getBookingID());
+                            }
+                            
+                            // If still invalid, log detailed information
+                            if (facilityID <= 0) {
+                                Log.e("AdminBookings", "CRITICAL: Booking " + b.getBookingID() + " has invalid facilityID (" + facilityID + "). " +
+                                      "Facility object: " + (b.getFacility() != null ? 
+                                      "present (ID=" + b.getFacility().getFacilityID() + ", name=" + b.getFacility().getFacilityName() + ")" : "null") +
+                                      ". This booking cannot be approved/rejected!");
+                            } else {
+                                Log.d("AdminBookings", "Loaded booking ID=" + b.getBookingID() + 
+                                      ", facilityID=" + facilityID + 
+                                      ", facility object=" + (b.getFacility() != null ? 
+                                      "present (ID=" + b.getFacility().getFacilityID() + ", name=" + b.getFacility().getFacilityName() + ")" : "null"));
+                            }
+                        }
                         filterBookings(currentFilter);
                     } else {
                         showEmptyState();
@@ -133,7 +156,7 @@ public class AdminBookingsActivity extends AppCompatActivity {
                         });
                         bottomNavigation.setSelectedItemId(R.id.nav_bookings);
                     } catch (Exception ignored) {}
-                 } else if (response.code() == 401) {
+                } else if (response.code() == 401) {
                     Toast.makeText(getApplicationContext(), Constants.MSG_SESSION_EXPIRED, Toast.LENGTH_LONG).show();
                     clearSessionAndRedirect();
                 } else {
@@ -146,7 +169,7 @@ public class AdminBookingsActivity extends AppCompatActivity {
             public void onFailure(Call<List<Booking>> call, Throwable t) {
                 // Hide loading indicator
                 progressBar.setVisibility(View.GONE);
-                
+
                 Toast.makeText(getApplicationContext(), Constants.MSG_NETWORK_ERROR, Toast.LENGTH_LONG).show();
                 Log.e("AdminBookings", "Error: " + t.getMessage());
             }
@@ -267,6 +290,21 @@ public class AdminBookingsActivity extends AppCompatActivity {
         SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
         User user = spm.getUser();
 
+        // Validate that facilityID is properly set
+        int facilityID = booking.getFacilityID();
+        if (facilityID <= 0) {
+            // Try to get facilityID from the facility object if available
+            if (booking.getFacility() != null && booking.getFacility().getFacilityID() > 0) {
+                facilityID = booking.getFacility().getFacilityID();
+                booking.setFacilityID(facilityID);
+                Log.d("AdminBookings", "Extracted facilityID from facility object: " + facilityID);
+            } else {
+                Toast.makeText(AdminBookingsActivity.this, "Error: Facility ID is missing. Cannot approve booking.", Toast.LENGTH_LONG).show();
+                Log.e("AdminBookings", "Cannot approve booking: facilityID is " + facilityID + ", bookingID=" + booking.getBookingID());
+                return;
+            }
+        }
+
         // Disable actions for this booking while request is in-flight
         if (adapter != null) adapter.setProcessing(booking.getBookingID(), true);
 
@@ -275,7 +313,7 @@ public class AdminBookingsActivity extends AppCompatActivity {
                 user.getToken(),
                 booking.getBookingID(),
                 booking.getUserID(),
-                booking.getFacilityID(),
+                facilityID,
                 booking.getBookingDate(),
                 booking.getStartTime(),
                 booking.getEndTime(),
@@ -342,6 +380,21 @@ public class AdminBookingsActivity extends AppCompatActivity {
         SharedPrefManager spm = new SharedPrefManager(getApplicationContext());
         User user = spm.getUser();
 
+        // Validate that facilityID is properly set
+        int facilityID = booking.getFacilityID();
+        if (facilityID <= 0) {
+            // Try to get facilityID from the facility object if available
+            if (booking.getFacility() != null && booking.getFacility().getFacilityID() > 0) {
+                facilityID = booking.getFacility().getFacilityID();
+                booking.setFacilityID(facilityID);
+                Log.d("AdminBookings", "Extracted facilityID from facility object: " + facilityID);
+            } else {
+                Toast.makeText(AdminBookingsActivity.this, "Error: Facility ID is missing. Cannot reject booking.", Toast.LENGTH_LONG).show();
+                Log.e("AdminBookings", "Cannot reject booking: facilityID is " + facilityID + ", bookingID=" + booking.getBookingID());
+                return;
+            }
+        }
+
         // Disable actions for this booking while request is in-flight
         if (adapter != null) adapter.setProcessing(booking.getBookingID(), true);
 
@@ -350,7 +403,7 @@ public class AdminBookingsActivity extends AppCompatActivity {
                 user.getToken(),
                 booking.getBookingID(),
                 booking.getUserID(),
-                booking.getFacilityID(),
+                facilityID,
                 booking.getBookingDate(),
                 booking.getStartTime(),
                 booking.getEndTime(),
@@ -439,7 +492,6 @@ public class AdminBookingsActivity extends AppCompatActivity {
         startActivity(intent);
     }
 }
-
 
 
 

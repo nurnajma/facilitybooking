@@ -2,6 +2,7 @@ package com.example.facilitybooking.adapters;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -94,31 +95,58 @@ public class AdminBookingAdapter extends RecyclerView.Adapter<AdminBookingAdapte
         if (booking.getFacility() != null && booking.getFacility().getFacilityName() != null && !booking.getFacility().getFacilityName().isEmpty()) {
             holder.tvFacilityName.setText(booking.getFacility().getFacilityName());
         } else {
-            holder.tvFacilityName.setText("Loading facility...");
-            try {
-                User user = spm.getUser();
-                if (user != null) {
-                    facilityService.getFacility(user.getToken(), booking.getFacilityID()).enqueue(new retrofit2.Callback<Facility>() {
-                        @Override
-                        public void onResponse(retrofit2.Call<Facility> call, Response<Facility> response) {
-                            if (response.isSuccessful() && response.body() != null) {
-                                holder.tvFacilityName.setText(response.body().getFacilityName());
-                                booking.setFacility(response.body());
-                            } else {
-                                holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
-                            }
-                        }
+            // Validate facilityID before making API call
+            int fidTemp = booking.getFacilityID();
 
-                        @Override
-                        public void onFailure(retrofit2.Call<Facility> call, Throwable t) {
-                            holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
-                        }
-                    });
-                } else {
-                    holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
+            // Try to get facilityID from facility object if booking's facilityID is invalid
+            if (fidTemp <= 0 && booking.getFacility() != null && booking.getFacility().getFacilityID() > 0) {
+                fidTemp = booking.getFacility().getFacilityID();
+                booking.setFacilityID(fidTemp);
+                Log.d("AdminBookingAdapter", "Extracted facilityID from facility object: " + fidTemp + " for booking " + booking.getBookingID());
+            }
+
+            if (fidTemp <= 0) {
+                // Invalid facilityID - show error message
+                holder.tvFacilityName.setText("Facility not found");
+                Log.e("AdminBookingAdapter", "Invalid facilityID (" + fidTemp + ") for booking " + booking.getBookingID() + ". Cannot fetch facility name.");
+            } else {
+                // make a final copy so the inner callback can reference it
+                final int facilityId = fidTemp;
+
+                holder.tvFacilityName.setText("Loading facility...");
+                try {
+                    User user = spm.getUser();
+                    if (user != null) {
+                        facilityService.getFacility(user.getToken(), facilityId).enqueue(new retrofit2.Callback<Facility>() {
+                            @Override
+                            public void onResponse(retrofit2.Call<Facility> call, Response<Facility> response) {
+                                if (response.isSuccessful() && response.body() != null) {
+                                    holder.tvFacilityName.setText(response.body().getFacilityName());
+                                    booking.setFacility(response.body());
+                                    // Ensure facilityID is set in booking
+                                    if (booking.getFacilityID() <= 0) {
+                                        booking.setFacilityID(response.body().getFacilityID());
+                                    }
+                                } else {
+                                    holder.tvFacilityName.setText("Facility not found");
+                                    Log.w("AdminBookingAdapter", "Failed to fetch facility " + facilityId + " for booking " + booking.getBookingID() + ": " + response.code());
+                                }
+                            }
+
+                            @Override
+                            public void onFailure(retrofit2.Call<Facility> call, Throwable t) {
+                                holder.tvFacilityName.setText("Facility not found");
+                                Log.e("AdminBookingAdapter", "Error fetching facility " + facilityId + " for booking " + booking.getBookingID() + ": " + t.getMessage());
+                            }
+                        });
+                    } else {
+                        holder.tvFacilityName.setText("Facility not found");
+                        Log.e("AdminBookingAdapter", "User not found, cannot fetch facility");
+                    }
+                } catch (Exception e) {
+                    holder.tvFacilityName.setText("Facility not found");
+                    Log.e("AdminBookingAdapter", "Exception fetching facility: " + e.getMessage());
                 }
-            } catch (Exception e) {
-                holder.tvFacilityName.setText("Facility ID: " + booking.getFacilityID());
             }
         }
 

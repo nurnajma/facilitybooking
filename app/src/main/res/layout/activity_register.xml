@@ -27,6 +27,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@android:color/white"
             app:cardElevation="4dp">
 
             <LinearLayout
@@ -41,7 +42,9 @@
                     android:layout_height="wrap_content"
                     android:hint="Username"
                     android:inputType="textPersonName"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="12dp"
+                    android:textColor="@color/black"/>
+
 
                 <EditText
                     android:id="@+id/edtEmail"
@@ -49,7 +52,8 @@
                     android:layout_height="wrap_content"
                     android:hint="Email"
                     android:inputType="textEmailAddress"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="12dp"
+                    android:textColor="@color/black"/>
 
                 <EditText
                     android:id="@+id/edtPassword"
@@ -57,7 +61,8 @@
                     android:layout_height="wrap_content"
                     android:hint="Password"
                     android:inputType="textPassword"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="12dp"
+                    android:textColor="@color/black"/>
 
                 <EditText
                     android:id="@+id/edtConfirmPassword"
@@ -65,7 +70,8 @@
                     android:layout_height="wrap_content"
                     android:hint="Confirm Password"
                     android:inputType="textPassword"
-                    android:layout_marginBottom="16dp" />
+                    android:layout_marginBottom="16dp"
+                    android:textColor="@color/black"/>
 
                 <!-- Loading indicator for registration API call -->
                 <ProgressBar

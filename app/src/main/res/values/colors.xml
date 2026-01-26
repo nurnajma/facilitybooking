@@ -30,4 +30,7 @@
 
     <!-- Rating Colors -->
     <color name="rating_star">#FFC107</color>
+
+    <color name="purple_700">#3700B3</color>
+
 </resources>

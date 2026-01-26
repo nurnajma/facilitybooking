@@ -55,6 +55,6 @@ public class SharedPrefManager {
     public boolean isAdmin() {
         SharedPreferences sharedPreferences = mCtx.getSharedPreferences(SHARED_PREF_NAME, Context.MODE_PRIVATE);
         String role = sharedPreferences.getString(KEY_ROLE, "normal");
-        return "admin".equals(role);
+        return "admin".equalsIgnoreCase(role);
     }
 }

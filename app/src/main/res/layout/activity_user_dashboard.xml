@@ -57,6 +57,7 @@
             android:paddingEnd="16dp"
             android:background="@android:drawable/edit_text"
             android:inputType="text"
+            android:textColor="@color/black"
             android:maxLines="1" />
 
         <Button

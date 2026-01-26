@@ -16,6 +16,7 @@ import com.example.facilitybooking.models.User;
 import com.example.facilitybooking.remote.ApiUtils;
 import com.example.facilitybooking.remote.FacilityService;
 import com.example.facilitybooking.sharedpref.SharedPrefManager;
+import com.example.facilitybooking.utils.Constants;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -54,6 +55,14 @@ public class FacilityDetailsActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (facility != null) {
+                    // Check if facility is under maintenance - prevent booking
+                    String facilityStatus = facility.getStatus() != null ? facility.getStatus().toLowerCase() : Constants.FACILITY_STATUS_AVAILABLE;
+                    if (Constants.FACILITY_STATUS_MAINTENANCE.equalsIgnoreCase(facilityStatus)) {
+                        Toast.makeText(FacilityDetailsActivity.this, Constants.MSG_FACILITY_MAINTENANCE, Toast.LENGTH_LONG).show();
+                        return; // Don't proceed to booking
+                    }
+                    
+                    // Facility is available - proceed to booking
                     Intent intent = new Intent(FacilityDetailsActivity.this, CreateBookingActivity.class);
                     intent.putExtra("facilityID", facility.getFacilityID());
                     intent.putExtra("facilityName", facility.getFacilityName());
@@ -109,13 +118,22 @@ public class FacilityDetailsActivity extends AppCompatActivity {
                     .into(ivFacilityHeader);
         }
 
-        String status = facility.getStatus().toUpperCase();
+        String status = facility.getStatus() != null ? facility.getStatus().toUpperCase() : "AVAILABLE";
+        String statusLower = facility.getStatus() != null ? facility.getStatus().toLowerCase() : Constants.FACILITY_STATUS_AVAILABLE;
         tvStatus.setText(status);
 
-        if ("AVAILABLE".equals(status)) {
+        boolean isMaintenance = Constants.FACILITY_STATUS_MAINTENANCE.equalsIgnoreCase(statusLower);
+
+        if (Constants.FACILITY_STATUS_AVAILABLE.equalsIgnoreCase(statusLower)) {
             tvStatus.setBackgroundColor(Color.parseColor("#4CAF50"));
             btnBookNow.setEnabled(true);
+            btnBookNow.setText("Book Now");
+        } else if (isMaintenance) {
+            tvStatus.setBackgroundColor(Color.parseColor("#FF9800"));
+            btnBookNow.setEnabled(false);
+            btnBookNow.setText("Under Maintenance");
         } else {
+            // Other status (fallback)
             tvStatus.setBackgroundColor(Color.parseColor("#FF9800"));
             btnBookNow.setEnabled(false);
             btnBookNow.setText("FACILITY UNAVAILABLE");

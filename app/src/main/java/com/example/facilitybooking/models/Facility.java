@@ -1,16 +1,32 @@
 package com.example.facilitybooking.models;
 
+import com.google.gson.annotations.SerializedName;
+import java.util.Objects;
+
 public class Facility {
+    @SerializedName(value = "facilityID", alternate = {"facility_id", "facilityId", "id"})
     private int facilityID;
+
+    @SerializedName(value = "facilityName", alternate = {"facility_name", "name"})
     private String facilityName;
+
     private String description;
     private int capacity;
+
+    @SerializedName(value = "hourlyRate", alternate = {"hourly_rate", "rate"})
     private double hourlyRate;
+
     private String location;
     private String status;
+
+    @SerializedName(value = "createdAt", alternate = {"created_at"})
     private String createdAt;
+
+    @SerializedName(value = "updatedAt", alternate = {"updated_at"})
     private String updatedAt;
-    private String imageUrl; // new optional image URL
+
+    @SerializedName(value = "imageUrl", alternate = {"image_url", "image"})
+    private String imageUrl; // optional image URL
 
     public Facility() {}
 
@@ -54,5 +70,25 @@ public class Facility {
                 ", status='" + status + '\'' +
                 ", imageUrl='" + imageUrl + '\'' +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Facility)) return false;
+        Facility facility = (Facility) o;
+        return facilityID == facility.facilityID &&
+                capacity == facility.capacity &&
+                Double.compare(facility.hourlyRate, hourlyRate) == 0 &&
+                Objects.equals(facilityName, facility.facilityName) &&
+                Objects.equals(description, facility.description) &&
+                Objects.equals(location, facility.location) &&
+                Objects.equals(status, facility.status) &&
+                Objects.equals(imageUrl, facility.imageUrl);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(facilityID, facilityName, description, capacity, hourlyRate, location, status, imageUrl);
     }
 }
